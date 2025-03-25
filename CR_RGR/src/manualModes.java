@@ -1,4 +1,4 @@
-public enum modes {
+public enum manualModes {
     NODES,
     ARCHES,
     NONE

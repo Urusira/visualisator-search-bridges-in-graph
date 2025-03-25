@@ -25,10 +25,10 @@
 }
 
 .circle {
-    -fx-border-color: BLACK;
-    -fx-background-color: WHITE;
+    -fx-stroke: BLACK;
+    -fx-fill: WHITE;
 }
 
 .line {
-    -fx-border-color: BLACK;
+    -fx-stroke: BLACK;
 }

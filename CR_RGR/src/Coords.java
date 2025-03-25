@@ -22,4 +22,9 @@ public class Coords {
         X = xCoord;
         Y = yCoord;
     }
+
+    @Override
+    public String toString() {
+        return X+", "+Y;
+    }
 }

@@ -12,7 +12,7 @@ public abstract class GraphObject {
 
     public void visit() {
         hasVisited = true;
-        figure.getStyleClass().add("-fx-background-color: LIGHTGRAY;");
+        figure.setFill(Color.LIGHTGRAY);
     }
 
     public boolean isHighlight() {
@@ -22,12 +22,19 @@ public abstract class GraphObject {
     public void turnHighlight() {
         if(highlight) {
             highlight = false;
-            figure.setStyle("-fx-fill: BLACK;");
+            figure.setStroke(Color.BLACK);
         }
         else {
             highlight = true;
-            figure.setStyle("-fx-fill: LIME;");
+            figure.setStroke(Color.LIME);
         }
+    }
+
+    public void select() {
+        figure.setStroke(Color.LIGHTGRAY);
+    }
+    public void deSelect() {
+        figure.setStroke(Color.BLACK);
     }
 
     public Shape getFigure() {
