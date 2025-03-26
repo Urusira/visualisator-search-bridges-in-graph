@@ -34,12 +34,12 @@ public class Arch extends GraphObject {
                 Objects.equals(linkedNodes[1], another.getTransitNodes()[0])
         );
     }
-
+/*
     public void delete() {
         for(int i = 0; i < linkedNodes.length; i++) {
             linkedNodes[i].deleteArch(this);
             linkedNodes[i] = null;
         }
         figure = null;
-    }
+    }*/
 }

@@ -50,7 +50,7 @@ public class Graph {
         }
         return null;
     }
-
+/*
     public void deleteArch(Node firstNode, Node secondNode, Arch arch) {
         graph.get(firstNode).remove(secondNode);
         graph.get(secondNode).remove(firstNode);
@@ -77,5 +77,5 @@ public class Graph {
             graph.remove(node);
         }
     }
-
+*/
 }

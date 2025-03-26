@@ -57,7 +57,7 @@ public class Main extends Application {
 
     private void reset(Pane drawSpace) {
         selectedNodes = null;
-        graph.clear();
+        //graph.clear();
         graph = new Graph();
         drawSpace.getChildren().clear();
     }
@@ -148,20 +148,14 @@ public class Main extends Application {
         graph.addNode(node);
 
         circleTmp.setOnMouseClicked(mouseEvent -> {
-            switch (manualDraw_Mode) {
-                case ARCHES -> {
-                    node.select();
-                    System.out.println("Clicked inside node " + node.getNumber() + ".");
-                    if (selectedNodes == null || selectedNodes == node) {
-                        selectedNodes = node;
-                    } else {
-                        doAttachment(selectedNodes, node, drawSpace);
-                        selectedNodes = null;
-                    }
-                }
-                case DELETE -> {
-                    drawSpace.getChildren().remove(circleTmp);
-                    graph.deleteNode(node);
+            if(manualDraw_Mode == manualModes.ARCHES) {
+                node.select();
+                System.out.println("Clicked inside node " + node.getNumber() + ".");
+                if (selectedNodes == null || selectedNodes == node) {
+                    selectedNodes = node;
+                } else {
+                    doAttachment(selectedNodes, node, drawSpace);
+                    selectedNodes = null;
                 }
             }
         });
@@ -175,8 +169,7 @@ public class Main extends Application {
 
 
         circleTmp.setOnMouseClicked(mouseEvent -> {
-            switch (manualDraw_Mode) {
-                case ARCHES -> {
+            if(manualDraw_Mode == manualModes.ARCHES) {
                     node.select();
                     System.out.println("Clicked inside node " + node.getNumber() + ".");
                     if (selectedNodes == null || selectedNodes == node) {
@@ -186,12 +179,7 @@ public class Main extends Application {
                         selectedNodes = null;
                     }
                 }
-                case DELETE -> {
-                    drawSpace.getChildren().remove(circleTmp);
-                    graph.deleteNode(node);
-                }
-            }
-        });
+            });
         return new Pair<>(node, success);
     }
 
@@ -210,17 +198,9 @@ public class Main extends Application {
 
         Line lineTmp = new Line(fstCenter.getX(), fstCenter.getY(), sndCenter.getX(), sndCenter.getY());
 
-
         Arch arch = new Arch(firstNode, secondNode, lineTmp);
         firstNode.addAttachment(arch);
         secondNode.addAttachment(arch);
-
-        lineTmp.setOnMouseClicked(mouseEvent -> {
-            if(manualDraw_Mode == manualModes.DELETE) {
-                drowSpace.getChildren().remove(lineTmp);
-                graph.deleteArch(firstNode, secondNode, arch);
-            }
-        });
 
         drowSpace.getChildren().addFirst(lineTmp);
     }
