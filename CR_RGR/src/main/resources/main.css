@@ -9,7 +9,12 @@
     -fx-spacing: 2em;
 }
 
-#modesPanel {
+#modeSelectBox {
+    -fx-alignment: center;
+    -fx-spacing: 1em;
+}
+
+#savLoadResBox {
     -fx-alignment: center;
     -fx-spacing: 1em;
 }
@@ -19,11 +24,6 @@
     -fx-text-alignment: center;
 }
 
-.button:hover {
-    -fx-scale-x: 1.05;
-    -fx-scale-y: 1.05;
-}
-
 .circle {
     -fx-stroke: BLACK;
     -fx-fill: WHITE;
@@ -31,4 +31,12 @@
 
 .line {
     -fx-stroke: BLACK;
+}
+
+.line:hover {
+    -fx-stroke: GRAY;
+}
+
+.circle:hover {
+    -fx-stroke: GRAY;
 }

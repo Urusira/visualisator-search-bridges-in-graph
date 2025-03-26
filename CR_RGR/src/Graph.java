@@ -1,7 +1,4 @@
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 
 public class Graph {
     private final TreeMap<Node, LinkedHashSet<Node>> graph;
@@ -53,4 +50,32 @@ public class Graph {
         }
         return null;
     }
+
+    public void deleteArch(Node firstNode, Node secondNode, Arch arch) {
+        graph.get(firstNode).remove(secondNode);
+        graph.get(secondNode).remove(firstNode);
+        arch.delete();
+    }
+
+    public void deleteNode(Node node) {
+        graph.remove(node);
+        Vector<Arch> attachments = node.getAttachments();
+        for(Arch arch : attachments) {
+            arch.delete();
+        }
+        for(var it : graph.entrySet()) {
+            it.getValue().remove(node);
+        }
+    }
+
+    public void clear() {
+        for(Node node : graph.keySet()) {
+            for(Arch arch : node.getAttachments()) {
+                arch.delete();
+                node.deleteArch(arch);
+            }
+            graph.remove(node);
+        }
+    }
+
 }
