@@ -39,4 +39,8 @@ public class Node extends GraphObject implements Comparable{
         Node node = (Node) o;
         return Integer.compare(this.number, node.number);
     }
+/*
+    public void deleteArch(Arch arch) {
+        attachments.remove(arch);
+    }*/
 }

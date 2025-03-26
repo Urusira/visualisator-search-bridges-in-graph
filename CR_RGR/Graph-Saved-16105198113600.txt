@@ -1,0 +1,6 @@
+2025-03-26T16:10:05.198113600
+0 attached[4], coords[225.6, 348.0]
+1 attached[4], coords[140.8, 300.8]
+2 attached[4], coords[96.0, 214.4]
+3 attached[4], coords[139.2, 109.6]
+4 attached[2, 1, 0, 3], coords[251.2, 206.4]

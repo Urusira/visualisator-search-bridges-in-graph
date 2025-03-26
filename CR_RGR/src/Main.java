@@ -4,11 +4,14 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Pair;
 
 import java.io.*;
 import java.util.*;
@@ -40,7 +43,7 @@ public class Main extends Application {
 
     @Override
     public void start(Stage stage) {
-        BorderPane root = rootInit();
+        BorderPane root = rootInit(stage);
 
         stage.setTitle(title);
         stage.setWidth(720);
@@ -52,16 +55,25 @@ public class Main extends Application {
         stage.show();
     }
 
+    private void reset(Pane drawSpace) {
+        selectedNodes = null;
+        //graph.clear();
+        graph = new Graph();
+        drawSpace.getChildren().clear();
+    }
 
-
-    private BorderPane rootInit() {
+    private BorderPane rootInit(Stage stage) {
 
         Pane drawSpace = new Pane();
         drawSpace.setId("drawSpace");
 
-        VBox toolBar = toolPanelInit(drawSpace);
+        VBox toolBar = toolPanelInit(stage, drawSpace);
 
-        drawSpace.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseEvent -> clicksHandler(drawSpace, mouseEvent));
+        drawSpace.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseEvent -> {
+            if(manualDraw_Mode == manualModes.NODES) {
+                placeGraphNode(mouseEvent.getX(), mouseEvent.getY(), drawSpace);
+            }
+        });
 
         BorderPane root = new BorderPane();
         root.setCenter(drawSpace);
@@ -71,23 +83,29 @@ public class Main extends Application {
         return root;
     }
 
-    private VBox toolPanelInit(Pane drawPanel) {
+    private VBox toolPanelInit(Stage stage, Pane drawPanel) {
         Label tbLabel = new Label("Toolbar");
         tbLabel.setId("toolBarLabel");
 
-        Button changeModeButton = new Button("Установка\nузлов");
-        changeModeButton.setOnAction(actionEvent -> {
-            changeMode();
-            switch (manualDraw_Mode) {
-                case NODES -> changeModeButton.setText("Соединение\nузлов");
-                case ARCHES -> changeModeButton.setText("Установка\nузлов");
-            }
+        Button nodesMode = new Button("Установка\nузлов");
+        nodesMode.setOnAction(actionEvent -> {
+            manualDraw_Mode = manualModes.NODES;
+        });
+
+        Button archesMode = new Button("Установка\nдуг");
+        archesMode.setOnAction(actionEvent -> {
+            manualDraw_Mode = manualModes.ARCHES;
+        });
+
+        Button delMode = new Button("Удаление");
+        delMode.setOnAction(actionEvent -> {
+            manualDraw_Mode = manualModes.DELETE;
         });
 
         Button saveButton = new Button("Сохранить\nграф");
         saveButton.setOnAction(actionEvent -> {
             try {
-                saveGraph();
+                saveGraph(stage);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -96,26 +114,73 @@ public class Main extends Application {
         Button loadButton = new Button("Загрузить\nграф");
         loadButton.setOnAction(actionEvent -> {
             try {
-                loadGraph(drawPanel);
+                loadGraph(stage, drawPanel);
             } catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
             }
         });
+        Button resetButton = new Button("Сбросить");
+        resetButton.setOnAction(actionEvent -> {
+            reset(drawPanel);
+        });
 
-        VBox toolBar = new VBox(tbLabel, changeModeButton, saveButton, loadButton);
+        HBox modeSelectBox = new HBox(nodesMode, archesMode, delMode);
+        modeSelectBox.setId("modeSelectBox");
+
+        HBox savLoadResBox = new HBox(saveButton, loadButton, resetButton);
+        modeSelectBox.setId("savLoadResBox");
+
+        VBox toolBar = new VBox(tbLabel, modeSelectBox, savLoadResBox);
         toolBar.setId("toolBar");
         return toolBar;
     }
 
 
-
-    private void placeGraphNode(double xCoord, double yCoord, Pane drowSpace) {
+    private void placeGraphNode(double xCoord, double yCoord, Pane drawSpace) {
         Circle circleTmp = new Circle(xCoord, yCoord, nodesRadius);
 
         var coords = new Coords(xCoord, yCoord);
-        graph.addNode(new Node(coords, circleTmp, graph.len()));
 
-        drowSpace.getChildren().add(circleTmp);
+        drawSpace.getChildren().add(circleTmp);
+
+        Node node = new Node(coords, circleTmp, graph.len());
+
+        graph.addNode(node);
+
+        circleTmp.setOnMouseClicked(mouseEvent -> {
+            if(manualDraw_Mode == manualModes.ARCHES) {
+                node.select();
+                System.out.println("Clicked inside node " + node.getNumber() + ".");
+                if (selectedNodes == null || selectedNodes == node) {
+                    selectedNodes = node;
+                } else {
+                    doAttachment(selectedNodes, node, drawSpace);
+                    selectedNodes = null;
+                }
+            }
+        });
+    }
+    private Pair<Node, Boolean> placeGraphNode(Coords coords, Pane drawSpace, int number) {
+        Circle circleTmp = new Circle(coords.getX(), coords.getY(), nodesRadius);
+
+        drawSpace.getChildren().add(circleTmp);
+        Node node = new Node(coords, circleTmp, number);
+        boolean success = graph.addNode(node);
+
+
+        circleTmp.setOnMouseClicked(mouseEvent -> {
+            if(manualDraw_Mode == manualModes.ARCHES) {
+                    node.select();
+                    System.out.println("Clicked inside node " + node.getNumber() + ".");
+                    if (selectedNodes == null || selectedNodes == node) {
+                        selectedNodes = node;
+                    } else {
+                        doAttachment(selectedNodes, node, drawSpace);
+                        selectedNodes = null;
+                    }
+                }
+            });
+        return new Pair<>(node, success);
     }
 
     private void doAttachment(Node firstNode, Node secondNode, Pane drowSpace) {
@@ -143,64 +208,25 @@ public class Main extends Application {
 
 
 
-
-    private void clicksHandler(Pane drawSpace, MouseEvent mouseEvent) {
-        double clX = mouseEvent.getX();
-        double clY = mouseEvent.getY();
-
-        System.out.println("Mouse click X: "+clX+"; Mouse click X: "+clY+"; Actual mode: "+ manualDraw_Mode.name());
-
-        switch (manualDraw_Mode) {
-            case NODES: {
-                placeGraphNode(clX, clY, drawSpace);
-                break;
-            }
-            case ARCHES: {
-                for(var node : graph.getKeys()) {
-                    Circle circle = (Circle) node.getFigure();
-                    Coords circCenter = new Coords(circle.getCenterX(), circle.getCenterY());
-
-                    double evcliDist = Math.sqrt(Math.pow(clX-circCenter.getX(), 2)+Math.pow(clY-circCenter.getY(), 2));
-
-                    if(evcliDist <= circle.getRadius()) {
-                        node.select();
-                        System.out.println("Clicked inside node "+node.getNumber()+".");
-                        if(selectedNodes == null || selectedNodes == node) {
-                            selectedNodes = node;
-                        }
-                        else {
-                            doAttachment(selectedNodes, node, drawSpace);
-                            selectedNodes = null;
-                        }
-                    }
-                    else {
-                        node.deSelect();
-                    }
-                }
-            }
-        }
-    }
-
-
-
-
-    public static void changeMode() {
-        switch (manualDraw_Mode) {
-            case NONE, ARCHES -> manualDraw_Mode = manualModes.NODES;
-            case NODES -> manualDraw_Mode = manualModes.ARCHES;
-        }
-    }
-
-
-
-    public void saveGraph() throws IOException {
+    public void saveGraph(Stage stage) throws IOException {
         var now = java.time.LocalDateTime.now();
         System.out.println("Saving...");
 
-        BufferedWriter writer = new BufferedWriter(new FileWriter(
-                "Graph-Saved-"+now.getHour()+now.getMinute()+now.getSecond()+now.getNano()+".txt",
-                true)
-        );
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Сохранение графа");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Графовые файлы", "*.graph"));
+        fc.setInitialFileName("Graph-Saved-"+now.getHour()+now.getMinute()+now.getSecond()+now.getNano());
+        File saveFile = fc.showSaveDialog(stage);
+
+        BufferedWriter writer;
+
+        try {
+            writer = new BufferedWriter(new FileWriter(saveFile));
+        } catch (NullPointerException e) {
+            System.out.println("WARNING\t\tNot choose save path.");
+            return;
+        }
+
         System.out.println("Saving...");
         writer.write(String.valueOf(now));
         writer.newLine();
@@ -221,36 +247,75 @@ public class Main extends Application {
         System.out.println("Saved done");
     }
 
-    public void loadGraph(Pane panel) throws FileNotFoundException {
+    public void loadGraph(Stage stage, Pane panel) throws FileNotFoundException {
+        System.out.println("LOADING\t\tLoading...");
         Scanner sc;
+
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Выберите файл графа");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Графовые файлы", "*.graph", "*.txt"));
+        File choosenFile = fc.showOpenDialog(stage);
         try {
-            sc = new Scanner(new File("GraphLoad.txt"));
+            sc = new Scanner(choosenFile);
+            System.out.println("LOADING\t\tReading file.");
         } catch (FileNotFoundException e) {
-            System.out.println("Error loading! File not found.");
+            System.out.println("ERROR\t\tError loading! File not found.");
+            return;
+        } catch (NullPointerException e) {
+            System.out.println("WARNING\t\tFile not choose.");
             return;
         }
 
-        while(sc.hasNextLine()) {
-            sc.nextLine();
+        reset(panel);
+        System.out.println("LOADING\t\tScreen has been cleared.\n");
 
+        graph = new Graph();
+        System.out.println("LOADING\t\tNew graph created.\n");
+
+        sc.nextLine();
+        System.out.println("LOADING\t\tSkip fst line.");
+
+        while(sc.hasNextLine()) {
             String temp = sc.nextLine();
+            System.out.println("LOADING\t\tGet new line.");
 
             int number = Character.getNumericValue(temp.charAt(0));
+            System.out.println("LOADING\t\tGet node number - "+number);
 
             String[] coordsTxt = temp.substring(temp.lastIndexOf("["), temp.lastIndexOf("]")).replaceAll("[^\\d.\\s]", "").split(" ");
             Coords coords = new Coords(Double.parseDouble(coordsTxt[0]), Double.parseDouble(coordsTxt[1]));
+            System.out.println("LOADING\t\tGet node coords: "+coords);
 
-            Node nodeTemp = new Node(coords, new Circle(coords.getX(), coords.getY(), nodesRadius), number);
-            graph.addNode(nodeTemp);
+            var created = placeGraphNode(coords, panel, number);
+            boolean success = created.getValue();
+            Node nodeTemp = created.getKey();
+
+            if(success) {
+                System.out.println("LOADING\t\tNode "+nodeTemp.getNumber()+" has been created and added to graph.\n");
+            }
+            else {
+                System.out.println("ERROR\t\tNode " + nodeTemp.getNumber() + " hasn't been created.\n");
+            }
 
             String[] attachmentsTxt = temp.substring(temp.indexOf("["), temp.indexOf("]")).replaceAll("[^\\d.\\s]", "").split(" ");
-            graph = new Graph();
+            System.out.println("LOADING\t\tAttachments of node "+nodeTemp.getNumber()+":"+ Arrays.toString(attachmentsTxt));
 
-            for(int j = 0; j < attachmentsTxt.length; j++) {
-                Node secondNode = graph.findWithNum(number);
+            for (String attachNode : attachmentsTxt) {
+                System.out.println("LOADING\t\tCheck attaches for "+nodeTemp.getNumber()+"...");
 
-                if(secondNode != null) {
-                    doAttachment(nodeTemp, graph.findWithNum(number), panel);
+                if (attachNode != null && !attachNode.isEmpty()) {
+                    Node secondNode = graph.findWithNum(Integer.parseInt(attachNode));
+                    if (secondNode != null) {
+                        System.out.println("LOADING\t\tLooking for " + attachNode);
+                        doAttachment(nodeTemp, secondNode, panel);
+                        System.out.println("LOADING\t\tSuccess attach " + nodeTemp.getNumber() + " and " + attachNode);
+                    }
+                    else {
+                        System.out.println("WARNING\t\tAttachment nodes not yet created.");
+                    }
+                }
+                else {
+                    System.out.println("WARNING\t\tNode haven't attaches.");
                 }
             }
         }
