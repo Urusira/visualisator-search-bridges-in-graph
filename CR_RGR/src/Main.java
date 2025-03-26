@@ -136,14 +136,35 @@ public class Main extends Application {
     }
 
 
-    private void placeGraphNode(double xCoord, double yCoord, Pane drowSpace) {
+    private void placeGraphNode(double xCoord, double yCoord, Pane drawSpace) {
         Circle circleTmp = new Circle(xCoord, yCoord, nodesRadius);
 
         var coords = new Coords(xCoord, yCoord);
 
-        drowSpace.getChildren().add(circleTmp);
+        drawSpace.getChildren().add(circleTmp);
 
-        graph.addNode(new Node(coords, circleTmp, graph.len()));
+        Node node = new Node(coords, circleTmp, graph.len());
+
+        graph.addNode(node);
+
+        circleTmp.setOnMouseClicked(mouseEvent -> {
+            switch (manualDraw_Mode) {
+                case ARCHES -> {
+                    node.select();
+                    System.out.println("Clicked inside node " + node.getNumber() + ".");
+                    if (selectedNodes == null || selectedNodes == node) {
+                        selectedNodes = node;
+                    } else {
+                        doAttachment(selectedNodes, node, drawSpace);
+                        selectedNodes = null;
+                    }
+                }
+                case DELETE -> {
+                    drawSpace.getChildren().remove(circleTmp);
+                    graph.deleteNode(node);
+                }
+            }
+        });
     }
     private Pair<Node, Boolean> placeGraphNode(Coords coords, Pane drawSpace, int number) {
         Circle circleTmp = new Circle(coords.getX(), coords.getY(), nodesRadius);
@@ -151,6 +172,7 @@ public class Main extends Application {
         drawSpace.getChildren().add(circleTmp);
         Node node = new Node(coords, circleTmp, number);
         boolean success = graph.addNode(node);
+
 
         circleTmp.setOnMouseClicked(mouseEvent -> {
             switch (manualDraw_Mode) {
