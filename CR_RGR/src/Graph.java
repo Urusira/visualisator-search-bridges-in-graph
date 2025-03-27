@@ -1,3 +1,5 @@
+import javafx.scene.layout.Pane;
+
 import java.util.*;
 
 public class Graph {
@@ -50,32 +52,25 @@ public class Graph {
         }
         return null;
     }
-/*
-    public void deleteArch(Node firstNode, Node secondNode, Arch arch) {
+    public void deleteArch(Node firstNode, Node secondNode, Arch arch, Pane drawSpace) {
+        drawSpace.getChildren().remove(arch.getFigure());
         graph.get(firstNode).remove(secondNode);
         graph.get(secondNode).remove(firstNode);
-        arch.delete();
+        firstNode.delAttach(arch);
+        secondNode.delAttach(arch);
     }
 
-    public void deleteNode(Node node) {
-        graph.remove(node);
+    public void deleteNode(Node node, Pane drawSpace) {
+        drawSpace.getChildren().remove(node.getFigure());
         Vector<Arch> attachments = node.getAttachments();
-        for(Arch arch : attachments) {
-            arch.delete();
+        while(!attachments.isEmpty()) {
+            Arch arch = attachments.firstElement();
+            Node[] transitNodes = arch.getTransitNodes();
+            deleteArch(transitNodes[0], transitNodes[1], arch, drawSpace);
         }
         for(var it : graph.entrySet()) {
             it.getValue().remove(node);
         }
+        graph.remove(node);
     }
-
-    public void clear() {
-        for(Node node : graph.keySet()) {
-            for(Arch arch : node.getAttachments()) {
-                arch.delete();
-                node.deleteArch(arch);
-            }
-            graph.remove(node);
-        }
-    }
-*/
 }

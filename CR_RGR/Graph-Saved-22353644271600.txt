@@ -1,3 +1,4 @@
+FILE_TYPE-GRAPH
 2025-03-26T18:06:29.232035700
 0 attached[1, 6, 8], coords[197.6, 306.4]
 1 attached[0, 2], coords[112.8, 246.4]

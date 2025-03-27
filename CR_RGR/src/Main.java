@@ -1,3 +1,4 @@
+import com.sun.javafx.tk.Toolkit;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -11,7 +12,6 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.util.Pair;
 
 import java.io.*;
 import java.util.*;
@@ -27,7 +27,7 @@ public class Main extends Application {
 
     private static final int nodesRadius = 30;
 
-
+    private File choosenFile = null;
 
     public static void main(String[] args) throws FileNotFoundException {
         Scanner sc = new Scanner(new File("titles.txt"));
@@ -45,14 +45,23 @@ public class Main extends Application {
     public void start(Stage stage) {
         BorderPane root = rootInit(stage);
 
-        stage.setTitle(title);
-        stage.setWidth(720);
-        stage.setHeight(440);
+        titleUpdate(stage);
+        stage.setMinWidth(640);
+        stage.setMinHeight(360);
 
         root.getStylesheets().add("main/resources/main.css");
 
         stage.setScene(new Scene(root));
         stage.show();
+    }
+
+    private void titleUpdate(Stage stage) {
+        if(choosenFile != null) {
+            stage.setTitle(choosenFile.getName() + " | " + title);
+        }
+        else {
+            stage.setTitle(title);
+        }
     }
 
     private void reset(Pane drawSpace) {
@@ -71,7 +80,7 @@ public class Main extends Application {
 
         drawSpace.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseEvent -> {
             if(manualDraw_Mode == manualModes.NODES) {
-                placeGraphNode(mouseEvent.getX(), mouseEvent.getY(), drawSpace);
+                placeGraphNode(new Coords(mouseEvent.getX(), mouseEvent.getY()), drawSpace, graph.len());
             }
         });
 
@@ -135,41 +144,17 @@ public class Main extends Application {
         return toolBar;
     }
 
-
-    private void placeGraphNode(double xCoord, double yCoord, Pane drawSpace) {
-        Circle circleTmp = new Circle(xCoord, yCoord, nodesRadius);
-
-        var coords = new Coords(xCoord, yCoord);
-
-        drawSpace.getChildren().add(circleTmp);
-
-        Node node = new Node(coords, circleTmp, graph.len());
-
-        graph.addNode(node);
-
-        circleTmp.setOnMouseClicked(mouseEvent -> {
-            if(manualDraw_Mode == manualModes.ARCHES) {
-                node.select();
-                System.out.println("Clicked inside node " + node.getNumber() + ".");
-                if (selectedNodes == null || selectedNodes == node) {
-                    selectedNodes = node;
-                } else {
-                    doAttachment(selectedNodes, node, drawSpace);
-                    selectedNodes = null;
-                }
-            }
-        });
-    }
-    private Pair<Node, Boolean> placeGraphNode(Coords coords, Pane drawSpace, int number) {
+    private Node placeGraphNode(Coords coords, Pane drawSpace, int number) {
         Circle circleTmp = new Circle(coords.getX(), coords.getY(), nodesRadius);
 
         drawSpace.getChildren().add(circleTmp);
         Node node = new Node(coords, circleTmp, number);
-        boolean success = graph.addNode(node);
+        graph.addNode(node);
 
 
         circleTmp.setOnMouseClicked(mouseEvent -> {
-            if(manualDraw_Mode == manualModes.ARCHES) {
+            switch (manualDraw_Mode) {
+                case manualModes.ARCHES: {
                     node.select();
                     System.out.println("Clicked inside node " + node.getNumber() + ".");
                     if (selectedNodes == null || selectedNodes == node) {
@@ -178,12 +163,18 @@ public class Main extends Application {
                         doAttachment(selectedNodes, node, drawSpace);
                         selectedNodes = null;
                     }
+                    break;
                 }
-            });
-        return new Pair<>(node, success);
+                case manualModes.DELETE: {
+                    graph.deleteNode(node, drawSpace);
+                    break;
+                }
+            }
+        });
+        return node;
     }
 
-    private void doAttachment(Node firstNode, Node secondNode, Pane drowSpace) {
+    private void doAttachment(Node firstNode, Node secondNode, Pane drawSpace) {
         firstNode.deSelect();
         secondNode.deSelect();
 
@@ -202,7 +193,13 @@ public class Main extends Application {
         firstNode.addAttachment(arch);
         secondNode.addAttachment(arch);
 
-        drowSpace.getChildren().addFirst(lineTmp);
+        lineTmp.setOnMouseClicked(mouseEvent -> {
+            if(manualDraw_Mode == manualModes.DELETE) {
+                graph.deleteArch(firstNode, secondNode, arch, drawSpace);
+            }
+        });
+
+        drawSpace.getChildren().addFirst(lineTmp);
     }
 
 
@@ -217,6 +214,7 @@ public class Main extends Application {
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Графовые файлы", "*.graph"));
         fc.setInitialFileName("Graph-Saved-"+now.getHour()+now.getMinute()+now.getSecond()+now.getNano());
         File saveFile = fc.showSaveDialog(stage);
+        choosenFile = saveFile;
 
         BufferedWriter writer;
 
@@ -228,6 +226,8 @@ public class Main extends Application {
         }
 
         System.out.println("Saving...");
+        writer.write("FILE_TYPE-GRAPH");
+        writer.newLine();
         writer.write(String.valueOf(now));
         writer.newLine();
 
@@ -244,6 +244,7 @@ public class Main extends Application {
             writer.newLine();
         }
         writer.close();
+        titleUpdate(stage);
         System.out.println("Saved done");
     }
 
@@ -254,7 +255,12 @@ public class Main extends Application {
         FileChooser fc = new FileChooser();
         fc.setTitle("Выберите файл графа");
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Графовые файлы", "*.graph", "*.txt"));
-        File choosenFile = fc.showOpenDialog(stage);
+        try {
+            fc.setInitialDirectory(choosenFile.getParentFile());
+        } catch (NullPointerException e) {
+            System.out.println("WARNING\t\tBuffer haven't file. Init select new fiile.");
+        }
+        choosenFile = fc.showOpenDialog(stage);
         try {
             sc = new Scanner(choosenFile);
             System.out.println("LOADING\t\tReading file.");
@@ -266,11 +272,16 @@ public class Main extends Application {
             return;
         }
 
+        String fileTypeCheck = sc.nextLine();
+        if(!Objects.equals(fileTypeCheck, "FILE_TYPE-GRAPH")) {
+            System.out.println("ERROR\t\tFile does not exists, wrong type.");
+            return;
+        }
+
+        sc.nextLine();
+
         reset(panel);
         System.out.println("LOADING\t\tScreen has been cleared.\n");
-
-        graph = new Graph();
-        System.out.println("LOADING\t\tNew graph created.\n");
 
         sc.nextLine();
         System.out.println("LOADING\t\tSkip fst line.");
@@ -286,16 +297,8 @@ public class Main extends Application {
             Coords coords = new Coords(Double.parseDouble(coordsTxt[0]), Double.parseDouble(coordsTxt[1]));
             System.out.println("LOADING\t\tGet node coords: "+coords);
 
-            var created = placeGraphNode(coords, panel, number);
-            boolean success = created.getValue();
-            Node nodeTemp = created.getKey();
-
-            if(success) {
-                System.out.println("LOADING\t\tNode "+nodeTemp.getNumber()+" has been created and added to graph.\n");
-            }
-            else {
-                System.out.println("ERROR\t\tNode " + nodeTemp.getNumber() + " hasn't been created.\n");
-            }
+            Node nodeTemp = placeGraphNode(coords, panel, number);
+            System.out.println("LOADING\t\tNode "+nodeTemp.getNumber()+" has been created and added to graph.\n");
 
             String[] attachmentsTxt = temp.substring(temp.indexOf("["), temp.indexOf("]")).replaceAll("[^\\d.\\s]", "").split(" ");
             System.out.println("LOADING\t\tAttachments of node "+nodeTemp.getNumber()+":"+ Arrays.toString(attachmentsTxt));
@@ -319,5 +322,6 @@ public class Main extends Application {
                 }
             }
         }
+        titleUpdate(stage);
     }
 }

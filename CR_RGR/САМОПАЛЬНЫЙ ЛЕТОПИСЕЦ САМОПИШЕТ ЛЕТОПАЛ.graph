@@ -1,7 +1,7 @@
-2025-03-26T21:30:15.521998300
-0 attached[1, 5, 4, 3], coords[104.8, 169.6]
-1 attached[0, 5], coords[112.8, 74.4]
-2 attached[5], coords[360.0, 104.0]
-3 attached[5, 4, 0], coords[289.6, 292.0]
-4 attached[3, 0, 5], coords[144.0, 283.2]
-5 attached[2, 0, 3, 4, 1], coords[262.4, 164.0]
+FILE_TYPE-GRAPH
+2025-03-27T10:40:22.141710300
+1 attached[7, 1, 1, 2], coords[112.8, 246.4]
+2 attached[1, 7, 1], coords[81.6, 105.6]
+3 attached[7], coords[152.0, 46.4]
+4 attached[7], coords[288.0, 32.0]
+7 attached[3, 2, 4, 1], coords[244.8, 174.4]
