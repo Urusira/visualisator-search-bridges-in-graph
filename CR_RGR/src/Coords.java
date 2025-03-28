@@ -27,4 +27,8 @@ public class Coords {
     public String toString() {
         return X+", "+Y;
     }
+
+    public static double minus(Coords a, Coords b) {
+        return Math.sqrt(Math.pow((b.getX() - a.getX()), 2)+Math.pow(b.getY()- a.getY(), 2));
+    }
 }

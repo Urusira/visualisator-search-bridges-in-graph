@@ -66,7 +66,6 @@ public class Main extends Application {
 
     private void reset(Pane drawSpace) {
         selectedNodes = null;
-        //graph.clear();
         graph = new Graph();
         drawSpace.getChildren().clear();
     }
@@ -132,6 +131,10 @@ public class Main extends Application {
         resetButton.setOnAction(actionEvent -> {
             reset(drawPanel);
         });
+        Button randomGraph = new Button("Случайный\nграф");
+        randomGraph.setOnAction(actionEvent -> {
+            randomGraph(5, 10, drawPanel);
+        });
 
         HBox modeSelectBox = new HBox(nodesMode, archesMode, delMode);
         modeSelectBox.setId("modeSelectBox");
@@ -139,12 +142,17 @@ public class Main extends Application {
         HBox savLoadResBox = new HBox(saveButton, loadButton, resetButton);
         modeSelectBox.setId("savLoadResBox");
 
-        VBox toolBar = new VBox(tbLabel, modeSelectBox, savLoadResBox);
+        VBox toolBar = new VBox(tbLabel, modeSelectBox, savLoadResBox, randomGraph);
         toolBar.setId("toolBar");
         return toolBar;
     }
 
     private Node placeGraphNode(Coords coords, Pane drawSpace, int number) {
+        if(!graph.isNear(coords, nodesRadius*3)) {
+            System.out.println("WARNING\t\tToo near to another node! Operation canceled.");
+            return null;
+        }
+
         Circle circleTmp = new Circle(coords.getX(), coords.getY(), nodesRadius);
 
         drawSpace.getChildren().add(circleTmp);
@@ -174,14 +182,14 @@ public class Main extends Application {
         return node;
     }
 
-    private void doAttachment(Node firstNode, Node secondNode, Pane drawSpace) {
+    private boolean doAttachment(Node firstNode, Node secondNode, Pane drawSpace) {
         firstNode.deSelect();
         secondNode.deSelect();
 
         boolean tryAddToGraph = graph.getValue(firstNode).add(secondNode) && graph.getValue(secondNode).add(firstNode);
         if(!tryAddToGraph) {
             System.out.println("Has attached! Operation is canceled.");
-            return;
+            return false;
         }
 
         Coords fstCenter = firstNode.getPos();
@@ -200,8 +208,37 @@ public class Main extends Application {
         });
 
         drawSpace.getChildren().addFirst(lineTmp);
+
+        return true;
     }
 
+
+    public void randomGraph(final int nodesAmount, final int archesAmount, Pane drawSpace) {
+        reset(drawSpace);
+        Random random = new Random();
+        for (int countNode = 0; countNode < nodesAmount; countNode++) {
+            Node nodeTmp = null;
+            while(nodeTmp == null) {
+                double randomX = random.nextDouble(drawSpace.getWidth());
+                double randomY = random.nextDouble(drawSpace.getHeight());
+                Coords coords = new Coords(randomX, randomY);
+                nodeTmp = placeGraphNode(coords, drawSpace, countNode);
+            }
+        }
+
+        Vector<Node> nodes = graph.getNodes();
+
+        for(int countArches = 0; countArches < archesAmount; countArches++) {
+            boolean tryAttach = false;
+            while(!tryAttach) {
+                tryAttach = doAttachment(
+                        nodes.get(random.nextInt(nodesAmount)),
+                        nodes.get(random.nextInt(nodesAmount)),
+                        drawSpace
+                );
+            }
+        }
+    }
 
 
 
@@ -277,8 +314,6 @@ public class Main extends Application {
             System.out.println("ERROR\t\tFile does not exists, wrong type.");
             return;
         }
-
-        sc.nextLine();
 
         reset(panel);
         System.out.println("LOADING\t\tScreen has been cleared.\n");

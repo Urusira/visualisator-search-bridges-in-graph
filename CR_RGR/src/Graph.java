@@ -73,4 +73,17 @@ public class Graph {
         }
         graph.remove(node);
     }
+
+    public Vector<Node> getNodes() {
+        return new Vector<>(graph.keySet());
+    }
+
+    public boolean isNear(Coords checkableCoords, double minDist) {
+        for(var node : graph.keySet()) {
+            if(Coords.minus(node.getPos(), checkableCoords) < minDist) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
