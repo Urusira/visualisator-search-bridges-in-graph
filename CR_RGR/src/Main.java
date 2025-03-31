@@ -1,4 +1,3 @@
-import com.sun.javafx.tk.Toolkit;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -186,9 +185,9 @@ public class Main extends Application {
         firstNode.deSelect();
         secondNode.deSelect();
 
-        boolean tryAddToGraph = graph.getValue(firstNode).add(secondNode) && graph.getValue(secondNode).add(firstNode);
-        if(!tryAddToGraph) {
-            System.out.println("Has attached! Operation is canceled.");
+        boolean tryAttach = graph.addAttach(firstNode, secondNode);
+        if(!tryAttach) {
+            System.out.println("ERROR\t\tCannot attach.");
             return false;
         }
 

@@ -23,8 +23,17 @@ public class Graph {
         return graph.size();
     }
 
-    public LinkedHashSet<Node> getValue(Node node) {
-        return graph.get(node);
+    public boolean addAttach(Node node1, Node node2) {
+        boolean tryAttach;
+        if(node1 == node2) {
+            System.out.println("WARNING\t\tNode cannot be attached with self.");
+            return false;
+        }
+        tryAttach = graph.get(node1).add(node2) && graph.get(node2).add(node1);
+        if(!tryAttach) {
+            System.out.println("Has attached! Operation is canceled.");
+        }
+        return tryAttach;
     }
 
     public String getStrValues(Node node) {
