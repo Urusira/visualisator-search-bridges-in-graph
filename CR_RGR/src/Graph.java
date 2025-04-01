@@ -26,12 +26,18 @@ public class Graph {
     public boolean addAttach(Node node1, Node node2) {
         boolean tryAttach;
         if(node1 == node2) {
-            System.out.println("WARNING\t\tNode cannot be attached with self.");
+            System.out.println("WARNING\t\tNode cannot be attached with self. Operation is canceled.");
             return false;
         }
+        АХТУНГ!!!
+        //TODO: ПРОБЛЕМА В ТОМ, ЧТО НОДЫ ДОБАВЛЯЮТСЯ, А ПОСЛЕ МЫ СМОТРИМ, ЧТО ДА КАК
+        //TODO: И ПРИ КАКОМ-ТО СЦЕНАРИИ ИДЁТ УДАЛЕНИЕ ДАЛЕЕ
+        //TODO: ИЗ-ЗА ЭТОГО, ПОХОЖЕ, ЧЕРЕЗ РАЗ ПРОХОДЯТ УЖЕ СУЩЕСТВУЮЩИЕ СВЯЗИ
+        //TODO: И ПОХОЖЕ, ЧТО ЭТО ЛОМАЕТ ТАБЛИЦУ СВЯЗНОСТИ ГРАФА, ЧТО ЛОМАЕТ СОХРАНЕНИЯ
         tryAttach = graph.get(node1).add(node2) && graph.get(node2).add(node1);
         if(!tryAttach) {
-            System.out.println("Has attached! Operation is canceled.");
+            System.out.println("WARNING\t\tHas attached! Operation is canceled.");
+            delArchInTable(node1, node2);
         }
         return tryAttach;
     }
@@ -63,14 +69,17 @@ public class Graph {
     }
     public void deleteArch(Node firstNode, Node secondNode, Arch arch, Pane drawSpace) {
         drawSpace.getChildren().remove(arch.getFigure());
-        graph.get(firstNode).remove(secondNode);
-        graph.get(secondNode).remove(firstNode);
+        delArchInTable(firstNode, secondNode);
         firstNode.delAttach(arch);
         secondNode.delAttach(arch);
     }
+    public void delArchInTable(Node firstNode, Node secondNode) {
+        graph.get(firstNode).remove(secondNode);
+        graph.get(secondNode).remove(firstNode);
+    }
 
     public void deleteNode(Node node, Pane drawSpace) {
-        drawSpace.getChildren().remove(node.getFigure());
+        drawSpace.getChildren().removeAll(node.getFigure(), node.getContainer());
         Vector<Arch> attachments = node.getAttachments();
         while(!attachments.isEmpty()) {
             Arch arch = attachments.firstElement();

@@ -11,7 +11,7 @@ public class Arch extends GraphObject {
     }
 
     public Arch(Node firstNode, Node secondNode, Line line) {
-        line.setStrokeWidth(2);
+        line.setStrokeWidth(3);
         line.setStroke(Color.BLACK);
         line.toBack();
 
