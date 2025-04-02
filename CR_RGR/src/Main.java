@@ -70,12 +70,12 @@ public class Main extends Application {
     }
 
     private void reset() {
-        System.out.println("RESET\t\tStart resetting draw panel.");
+        loggerPush("RESET\t\tStart resetting draw panel.");
         selectedNodes = null;
         graph = new Graph();
-        System.out.println("RESET\t\tGraph has cleared.");
+        loggerPush("RESET\t\tGraph has cleared.");
         drawSpace.getChildren().clear();
-        System.out.println("RESET\t\tPanel has cleared.");
+        loggerPush("RESET\t\tPanel has cleared.");
     }
 
     private BorderPane rootInit() {
@@ -237,7 +237,7 @@ public class Main extends Application {
 
     private Node placeGraphNode(Coords coords, int number) {
         if(!graph.isNear(coords, minNodesDist)) {
-            System.out.println("WARNING\t\tToo near to another node! Operation canceled.");
+            loggerPush("WARNING\t\tToo near to another node! Operation canceled.");
             return null;
         }
 
@@ -256,7 +256,7 @@ public class Main extends Application {
             switch (manualDraw_Mode) {
                 case manualModes.ARCHES: {
                     node.select();
-                    System.out.println("Clicked inside node " + node.getNumber() + ".");
+                    loggerPush("Clicked inside node " + node.getNumber() + ".");
                     if (selectedNodes == null || selectedNodes == node) {
                         selectedNodes = node;
                     } else {
@@ -276,47 +276,47 @@ public class Main extends Application {
     private boolean doAttachment(Node firstNode, Node secondNode) {
         selectedNodes = null;
 
-        System.out.println("DO_ATTACH\t\tDeselection nodes.");
+        loggerPush("DO_ATTACH\t\tDeselection nodes.");
         firstNode.deSelect();
         secondNode.deSelect();
 
-        System.out.println("DO_ATTACH\t\tTrying add attach in links table.");
+        loggerPush("DO_ATTACH\t\tTrying add attach in links table.");
         boolean tryAttach = graph.addAttach(firstNode, secondNode);
         if(!tryAttach) {
-            System.out.println("ERROR\t\tCannot attach.");
+            loggerPush("ERROR\t\tCannot attach.");
             return false;
         }
 
-        System.out.println("DO_ATTACH\t\tGet coordinates, create line.");
+        loggerPush("DO_ATTACH\t\tGet coordinates, create line.");
         Coords fstCenter = firstNode.getPos();
         Coords sndCenter = secondNode.getPos();
 
         Line lineTmp = new Line(fstCenter.getX(), fstCenter.getY(), sndCenter.getX(), sndCenter.getY());
 
-        System.out.println("DO_ATTACH\t\tCreating arch.");
+        loggerPush("DO_ATTACH\t\tCreating arch.");
         Arch arch = new Arch(firstNode, secondNode, lineTmp);
 
-        System.out.println("DO_ATTACH\t\tAdd attachments in nodes.");
+        loggerPush("DO_ATTACH\t\tAdd attachments in nodes.");
         firstNode.addAttachment(arch);
         secondNode.addAttachment(arch);
 
-        System.out.println("DO_ATTACH\t\tCreate mouse click handler.");
+        loggerPush("DO_ATTACH\t\tCreate mouse click handler.");
         lineTmp.setOnMouseClicked(mouseEvent -> {
             if(manualDraw_Mode == manualModes.DELETE) {
                 graph.deleteArch(firstNode, secondNode, arch, drawSpace);
             }
         });
 
-        System.out.println("DO_ATTACH\t\tAdd line to draw panel.");
+        loggerPush("DO_ATTACH\t\tAdd line to draw panel.");
         drawSpace.getChildren().addFirst(lineTmp);
 
-        System.out.println("DO_ATTACH\t\tSuccessful attach.");
+        loggerPush("DO_ATTACH\t\tSuccessful attach.");
         return true;
     }
 
 
     public void randomGraph(final int nodesAmount, int archesAmount) {
-        System.out.println("RANDOM_GEN\t\tStart generating random graph.");
+        loggerPush("RANDOM_GEN\t\tStart generating random graph.");
 
         reset();
         Random random = new Random();
@@ -355,7 +355,7 @@ public class Main extends Application {
 
     public void saveGraph(boolean asNew) throws IOException {
         var now = java.time.LocalDateTime.now();
-        System.out.println("Saving...");
+        loggerPush("Saving...");
 
         if(asNew) {
             FileChooser fc = new FileChooser();
@@ -370,22 +370,22 @@ public class Main extends Application {
         try {
             writer = new BufferedWriter(new FileWriter(choosenFile));
         } catch (NullPointerException e) {
-            System.out.println("WARNING\t\tNot choose save path.");
+            loggerPush("WARNING\t\tNot choose save path.");
             if(!asNew) {
-                System.out.println("SAVING\t\tChoose new save path.");
+                loggerPush("SAVING\t\tChoose new save path.");
                 saveGraph(true);
             }
             return;
         }
 
-        System.out.println("SAVING\t\tSaving init");
+        loggerPush("SAVING\t\tSaving init");
         writer.write("FILE_TYPE-GRAPH");
         writer.newLine();
         writer.write(String.valueOf(now));
         writer.newLine();
 
         for(Node node : graph.getKeys()) {
-            System.out.println("SAVING\t\t"+((double)(node.getNumber()+1)/graph.len())*100+"%");
+            loggerPush("SAVING\t\t"+((double)(node.getNumber()+1)/graph.len())*100+"%");
             writer.write(
                     node.getNumber()+
                             " attached["+
@@ -398,11 +398,11 @@ public class Main extends Application {
         }
         writer.close();
         titleUpdate();
-        System.out.println("SAVING\t\tSaved done");
+        loggerPush("SAVING\t\tSaved done");
     }
 
     public void loadGraph() throws FileNotFoundException {
-        System.out.println("LOADING\t\tLoading...");
+        loggerPush("LOADING\t\tLoading...");
         Scanner sc;
 
         FileChooser fc = new FileChooser();
@@ -411,67 +411,67 @@ public class Main extends Application {
         try {
             fc.setInitialDirectory(choosenFile.getParentFile());
         } catch (NullPointerException e) {
-            System.out.println("WARNING\t\tBuffer haven't file. Init select new fiile.");
+            loggerPush("WARNING\t\tBuffer haven't file. Init select new fiile.");
         }
         choosenFile = fc.showOpenDialog(mainStage);
         try {
             sc = new Scanner(choosenFile);
-            System.out.println("LOADING\t\tReading file.");
+            loggerPush("LOADING\t\tReading file.");
         } catch (FileNotFoundException e) {
-            System.out.println("ERROR\t\tError loading! File not found.");
+            loggerPush("ERROR\t\tError loading! File not found.");
             return;
         } catch (NullPointerException e) {
-            System.out.println("WARNING\t\tFile not choose.");
+            loggerPush("WARNING\t\tFile not choose.");
             return;
         }
 
         String fileTypeCheck = sc.nextLine();
         if(!Objects.equals(fileTypeCheck, "FILE_TYPE-GRAPH")) {
-            System.out.println("ERROR\t\tFile does not exists, wrong type.");
+            loggerPush("ERROR\t\tFile does not exists, wrong type.");
             return;
         }
 
         reset();
-        System.out.println("LOADING\t\tScreen has been cleared.\n");
+        loggerPush("LOADING\t\tScreen has been cleared.\n");
 
         sc.nextLine();
-        System.out.println("LOADING\t\tSkip fst line.");
+        loggerPush("LOADING\t\tSkip fst line.");
 
         while(sc.hasNextLine()) {
             String loadedLine = sc.nextLine();
-            System.out.println("LOADING\t\tGet new line.");
+            loggerPush("LOADING\t\tGet new line.");
 
             String[] coordTxt = loadedLine.substring(loadedLine.lastIndexOf("["), loadedLine.lastIndexOf("]")).replaceAll("[^\\d.\\s]", "").split(" ");
 
             int number = Integer.parseInt(loadedLine.substring(0, loadedLine.indexOf(" ")));
-            System.out.println("LOADING\t\tGet node number - "+number);
+            loggerPush("LOADING\t\tGet node number - "+number);
 
             Coords coords = new Coords(Double.parseDouble(coordTxt[0]), Double.parseDouble(coordTxt[1]));
-            System.out.println("LOADING\t\tGet node coords: "+coords);
+            loggerPush("LOADING\t\tGet node coords: "+coords);
 
 
             Node nodeTemp = placeGraphNode(coords, number);
-            System.out.println("LOADING\t\tNode "+nodeTemp.getNumber()+" has been created and added to graph.\n");
+            loggerPush("LOADING\t\tNode "+nodeTemp.getNumber()+" has been created and added to graph.\n");
 
             String[] attachmentsTxt = loadedLine.substring(loadedLine.indexOf("["), loadedLine.indexOf("]")).replaceAll("[^\\d.\\s]", "").split(" ");
-            System.out.println("LOADING\t\tAttachments of node "+nodeTemp.getNumber()+":"+ Arrays.toString(attachmentsTxt));
+            loggerPush("LOADING\t\tAttachments of node "+nodeTemp.getNumber()+":"+ Arrays.toString(attachmentsTxt));
 
             for (String attachNode : attachmentsTxt) {
-                System.out.println("LOADING\t\tCheck attaches for "+nodeTemp.getNumber()+"...");
+                loggerPush("LOADING\t\tCheck attaches for "+nodeTemp.getNumber()+"...");
 
                 if (attachNode != null && !attachNode.isEmpty()) {
                     Node secondNode = graph.findWithNum(Integer.parseInt(attachNode));
                     if (secondNode != null) {
-                        System.out.println("LOADING\t\tLooking for " + attachNode);
+                        loggerPush("LOADING\t\tLooking for " + attachNode);
                         doAttachment(nodeTemp, secondNode);
-                        System.out.println("LOADING\t\tSuccess attach " + nodeTemp.getNumber() + " and " + attachNode);
+                        loggerPush("LOADING\t\tSuccess attach " + nodeTemp.getNumber() + " and " + attachNode);
                     }
                     else {
-                        System.out.println("WARNING\t\tAttachment nodes not yet created.");
+                        loggerPush("WARNING\t\tAttachment nodes not yet created.");
                     }
                 }
                 else {
-                    System.out.println("WARNING\t\tNode haven't attaches.");
+                    loggerPush("WARNING\t\tNode haven't attaches.");
                 }
             }
         }
@@ -487,5 +487,10 @@ public class Main extends Application {
             insertRadiusNodes();
         });
         alert.showAndWait();
+    }
+    
+    //TODO: ЗДЕСЬ БУДЕТ ВЫВОД ТЕКСТА В ПАНЕЛЬКУ ВНИЗУ ПРОГРАММЫ
+    private void loggerPush(String text) {
+        System.out.println(text);
     }
 }
