@@ -82,7 +82,11 @@ public class Main extends Application {
         drawSpace = new Pane();
         drawSpace.setId("drawSpace");
 
-        VBox rightPanel = rightPanelInit();
+        Tab graphBuildTab = new Tab("Graph building", graphBuilderInit());
+        graphBuildTab.closableProperty().set(false);
+        Tab algorythmTab = new Tab("Bridges search", bridgeSearchInit());
+        algorythmTab.closableProperty().set(false);
+        TabPane rightPanel = new TabPane(graphBuildTab, algorythmTab);
 
         ToolBar toolBar = toolBarInit();
 
@@ -101,38 +105,38 @@ public class Main extends Application {
         return root;
     }
 
-    private VBox rightPanelInit() {
-        Label tbLabel = new Label("Toolbar");
-        tbLabel.setId("toolBarLabel");
+    private VBox graphBuilderInit() {
+        Label tbLabel = new Label("Manual building graph");
+        tbLabel.setId("rightPanelLabel");
 
-        Button nodesMode = new Button("Установка\nузлов");
+        Button nodesMode = new Button("Set\nnodes");
         nodesMode.setOnAction(actionEvent -> {
             manualDraw_Mode = manualModes.NODES;
         });
 
-        Button archesMode = new Button("Установка\nдуг");
+        Button archesMode = new Button("Set\narches");
         archesMode.setOnAction(actionEvent -> {
             manualDraw_Mode = manualModes.ARCHES;
         });
 
-        Button delMode = new Button("Удаление");
+        Button delMode = new Button("Delete");
         delMode.setOnAction(actionEvent -> {
             manualDraw_Mode = manualModes.DELETE;
         });
 
-        Button resetButton = new Button("Сбросить");
+        Button resetButton = new Button("Reset");
         resetButton.setOnAction(actionEvent -> {
             reset();
         });
 
-        Label randomLabel = new Label("Random Generation");
+        Label randomLabel = new Label("Random graph generation");
         TextField nodesAmount = new TextField();
         TextField archesAmount = new TextField();
 
-        nodesAmount.setPromptText("Количество узлов");
-        archesAmount.setPromptText("Количество дуг");
+        nodesAmount.setPromptText("Nodes amount");
+        archesAmount.setPromptText("Arches amount");
         HBox randomParams = new HBox(nodesAmount, archesAmount);
-        Button randomGraph = new Button("Случайный\nграф");
+        Button randomGraph = new Button("Generate");
         randomGraph.setOnAction(actionEvent -> {
             randomGraph(Integer.parseInt(nodesAmount.getText()), Integer.parseInt(archesAmount.getText()));
         });
@@ -140,9 +144,17 @@ public class Main extends Application {
         HBox modeSelectBox = new HBox(nodesMode, archesMode, delMode);
         modeSelectBox.setId("modeSelectBox");
 
-        VBox toolBar = new VBox(tbLabel, modeSelectBox, resetButton , randomLabel, randomParams, randomGraph);
-        toolBar.setId("toolBar");
-        return toolBar;
+        VBox graphBuildTab = new VBox(tbLabel, modeSelectBox, resetButton , randomLabel, randomParams, randomGraph);
+        graphBuildTab.setId("graphBuildTab");
+        return graphBuildTab;
+    }
+
+    //TODO: ЗДЕСЬ РАСПОЛАГАЕТСЯ ИНИЦИАЛИЗАЦИЯ ПАНЕЛИ АЛГОРИТМА. В НЕЙ НУЖНО РЕАЛИЗОВАТЬ ВЕСЬ АЛГОРИТМ ПОИСКА МОСТА.
+    private VBox bridgeSearchInit() {
+
+        VBox algorythmTab = new VBox();
+        algorythmTab.setId("algorythmTab");
+        return algorythmTab;
     }
 
     private ToolBar toolBarInit() {
@@ -322,7 +334,7 @@ public class Main extends Application {
         Random random = new Random();
         for (int countNode = 0; countNode < nodesAmount; countNode++) {
             Node nodeTmp = null;
-            // TODO: МОЖНО УПРОСТИТЬ, ВМЕСТО ПОПЫТКИ УСТАНОВКИ НОДЫ ВЫПОЛНИТЬ ПРОDЕРКУ ДОСТУПНОСТИ КООРДИНАТ
+            // TODO: МОЖНО УПРОСТИТЬ, ВМЕСТО ПОПЫТКИ УСТАНОВКИ НОДЫ ВЫПОЛНИТЬ ПРОВЕРКУ ДОСТУПНОСТИ КООРДИНАТ
             while(nodeTmp == null) {
                 double randomX = random.nextDouble(drawSpace.getWidth());
                 double randomY = random.nextDouble(drawSpace.getHeight());
@@ -359,8 +371,8 @@ public class Main extends Application {
 
         if(asNew) {
             FileChooser fc = new FileChooser();
-            fc.setTitle("Сохранение графа");
-            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Графовые файлы", "*.graph"));
+            fc.setTitle("Graph save");
+            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Graphs files", "*.graph"));
             fc.setInitialFileName("Graph-Saved-" + now.getHour() + now.getMinute() + now.getSecond() + now.getNano());
             choosenFile = fc.showSaveDialog(mainStage);
         }
@@ -406,8 +418,8 @@ public class Main extends Application {
         Scanner sc;
 
         FileChooser fc = new FileChooser();
-        fc.setTitle("Выберите файл графа");
-        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Графовые файлы", "*.graph", "*.txt"));
+        fc.setTitle("Selection graph file");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Graphs files", "*.graph", "*.txt"));
         try {
             fc.setInitialDirectory(choosenFile.getParentFile());
         } catch (NullPointerException e) {

@@ -2,7 +2,14 @@
     -fx-background-color: #edebed;
 }
 
-#toolBar {
+#graphBuildTab {
+    -fx-background-color: LIGHTGRAY;
+    -fx-pref-width: 20em;
+    -fx-alignment: top-center;
+    -fx-spacing: 2em;
+}
+
+#algorythmTab {
     -fx-background-color: LIGHTGRAY;
     -fx-pref-width: 20em;
     -fx-alignment: top-center;
@@ -31,12 +38,4 @@
 
 .line {
     -fx-stroke: BLACK;
-}
-
-.line:hover {
-    -fx-stroke: GRAY;
-}
-
-.circle:hover {
-    -fx-stroke: GRAY;
 }
