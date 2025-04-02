@@ -18,7 +18,7 @@ import java.util.*;
 public class Main extends Application {
     private static Graph graph = new Graph();
     private final static Vector<String> titlesVec = new Vector<>();
-    private static String title = "ПАЛИТИКИ САШЛИСЬ В ДУЕЛИ!";
+    private static String title;
 
     static manualModes manualDraw_Mode = manualModes.NONE;
     static Node selectedNodes = null;
@@ -128,18 +128,7 @@ public class Main extends Application {
         Label randomLabel = new Label("Random Generation");
         TextField nodesAmount = new TextField();
         TextField archesAmount = new TextField();
-        /* TODO: НАДО ПРИДУМАТЬ КОНТРОЛЬ ПОЛУЧШЕ, ЭТОТ СПОСОБ ПРИВОДИТ К ПЕРЕГРУЗКЕ СТЕКА
-        archesAmount.textProperty().addListener((shtoEto) -> {
-            try {
-                int max = (int) Math.pow(Integer.parseInt(nodesAmount.getText()) - 1, 2);
 
-                if (Integer.parseInt(archesAmount.getText()) > max) {
-                    archesAmount.setText(String.valueOf(max));
-                }
-            } catch (NumberFormatException e) {
-                archesAmount.setText("");
-            }
-        });*/
         nodesAmount.setPromptText("Количество узлов");
         archesAmount.setPromptText("Количество дуг");
         HBox randomParams = new HBox(nodesAmount, archesAmount);
@@ -217,10 +206,7 @@ public class Main extends Application {
             if(Double.parseDouble(newValue) > 0) {
                 minNodesDist = Double.parseDouble(newValue);
             } else {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Wrong input");
-                alert.setHeaderText(null);
-                alert.setContentText("Input value must be only greater than 0!");
+                wrongInputAlert("Input value must be only greater than 0!");
             }
         });
     }
@@ -244,14 +230,7 @@ public class Main extends Application {
                     }
                 }
             } else {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Wrong input");
-                alert.setHeaderText(null);
-                alert.setContentText("Input value must be greater than 7!");
-                alert.setOnCloseRequest(dialogEvent -> {
-                    insertRadiusNodes();
-                });
-                alert.showAndWait();
+                wrongInputAlert("Input value must be greater than 7!");
             }
         });
     }
@@ -336,12 +315,14 @@ public class Main extends Application {
     }
 
 
-    public void randomGraph(final int nodesAmount, final int archesAmount) {
+    public void randomGraph(final int nodesAmount, int archesAmount) {
         System.out.println("RANDOM_GEN\t\tStart generating random graph.");
+
         reset();
         Random random = new Random();
         for (int countNode = 0; countNode < nodesAmount; countNode++) {
             Node nodeTmp = null;
+            // TODO: МОЖНО УПРОСТИТЬ, ВМЕСТО ПОПЫТКИ УСТАНОВКИ НОДЫ ВЫПОЛНИТЬ ПРОDЕРКУ ДОСТУПНОСТИ КООРДИНАТ
             while(nodeTmp == null) {
                 double randomX = random.nextDouble(drawSpace.getWidth());
                 double randomY = random.nextDouble(drawSpace.getHeight());
@@ -351,6 +332,13 @@ public class Main extends Application {
         }
 
         Vector<Node> nodes = graph.getNodes();
+
+        int max = ((nodesAmount-1)*nodesAmount)/2;
+
+        if(archesAmount > max) {
+
+            archesAmount = max;
+        }
 
         for(int countArches = 0; countArches < archesAmount; countArches++) {
             boolean tryAttach = false;
@@ -383,17 +371,21 @@ public class Main extends Application {
             writer = new BufferedWriter(new FileWriter(choosenFile));
         } catch (NullPointerException e) {
             System.out.println("WARNING\t\tNot choose save path.");
+            if(!asNew) {
+                System.out.println("SAVING\t\tChoose new save path.");
+                saveGraph(true);
+            }
             return;
         }
 
-        System.out.println("Saving...");
+        System.out.println("SAVING\t\tSaving init");
         writer.write("FILE_TYPE-GRAPH");
         writer.newLine();
         writer.write(String.valueOf(now));
         writer.newLine();
 
         for(Node node : graph.getKeys()) {
-            System.out.println(((double)(node.getNumber()+1)/graph.len())*100+"%");
+            System.out.println("SAVING\t\t"+((double)(node.getNumber()+1)/graph.len())*100+"%");
             writer.write(
                     node.getNumber()+
                             " attached["+
@@ -406,7 +398,7 @@ public class Main extends Application {
         }
         writer.close();
         titleUpdate();
-        System.out.println("Saved done");
+        System.out.println("SAVING\t\tSaved done");
     }
 
     public void loadGraph() throws FileNotFoundException {
@@ -484,5 +476,16 @@ public class Main extends Application {
             }
         }
         titleUpdate();
+    }
+
+    private void wrongInputAlert(String desc) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Wrong input");
+        alert.setHeaderText(null);
+        alert.setContentText(desc);
+        alert.setOnCloseRequest(dialogEvent -> {
+            insertRadiusNodes();
+        });
+        alert.showAndWait();
     }
 }

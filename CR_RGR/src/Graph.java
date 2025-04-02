@@ -24,22 +24,20 @@ public class Graph {
     }
 
     public boolean addAttach(Node node1, Node node2) {
-        boolean tryAttach;
         if(node1 == node2) {
             System.out.println("WARNING\t\tNode cannot be attached with self. Operation is canceled.");
             return false;
         }
-        АХТУНГ!!!
-        //TODO: ПРОБЛЕМА В ТОМ, ЧТО НОДЫ ДОБАВЛЯЮТСЯ, А ПОСЛЕ МЫ СМОТРИМ, ЧТО ДА КАК
-        //TODO: И ПРИ КАКОМ-ТО СЦЕНАРИИ ИДЁТ УДАЛЕНИЕ ДАЛЕЕ
-        //TODO: ИЗ-ЗА ЭТОГО, ПОХОЖЕ, ЧЕРЕЗ РАЗ ПРОХОДЯТ УЖЕ СУЩЕСТВУЮЩИЕ СВЯЗИ
-        //TODO: И ПОХОЖЕ, ЧТО ЭТО ЛОМАЕТ ТАБЛИЦУ СВЯЗНОСТИ ГРАФА, ЧТО ЛОМАЕТ СОХРАНЕНИЯ
-        tryAttach = graph.get(node1).add(node2) && graph.get(node2).add(node1);
-        if(!tryAttach) {
+
+        if(graph.get(node1).contains(node2) || graph.get(node2).contains(node1)) {
             System.out.println("WARNING\t\tHas attached! Operation is canceled.");
-            delArchInTable(node1, node2);
+            return false;
         }
-        return tryAttach;
+
+        graph.get(node1).add(node2);
+        graph.get(node2).add(node1);
+
+        return true;
     }
 
     public String getStrValues(Node node) {
