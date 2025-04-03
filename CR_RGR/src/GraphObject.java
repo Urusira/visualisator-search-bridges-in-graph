@@ -13,6 +13,7 @@ public abstract class GraphObject {
     public void visit() {
         hasVisited = true;
         figure.setFill(Color.LIGHTGRAY);
+        figure.setStroke(Color.GRAY);
     }
 
     public void turnHighlight() {

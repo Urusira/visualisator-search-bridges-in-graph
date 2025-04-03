@@ -1,3 +1,4 @@
+import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -10,6 +11,7 @@ import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.*;
 import java.util.*;
@@ -155,7 +157,11 @@ public class Main extends Application {
         Button startRun = new Button("Start graph run");
         startRun.setId("startAlgo");
         startRun.setOnAction(actionEvent -> {
-            runInDepth();
+            try {
+                runInDepth();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         });
 
         VBox algorythmTab = new VBox(startRun);
@@ -163,40 +169,61 @@ public class Main extends Application {
         return algorythmTab;
     }
 
-    private void runInDepth() {
+    private void runInDepth() throws InterruptedException {
         Node curNode = graph.findWithNum(0);
         runNext(curNode);
     }
 
-    private void runNext(Node curNode) {
+    private synchronized void runNext(final Node curNode) throws InterruptedException {
         curNode.turnHighlight();
-        Vector<Arch> attaches = curNode.getAttachments();
-        Optional<Arch> attach = Optional.empty();
-        for(Arch arch : attaches) {
-            if(!arch.isVisited()) {
-                attach = Optional.of(arch);
+        PauseTransition nodePause = new PauseTransition(Duration.millis(500));
+        nodePause.setOnFinished(actionEvent -> {
+            Vector<Arch> attaches = curNode.getAttachments();
+            Optional<Arch> attachEmptyCheck = Optional.empty();
+            for(Arch arch : attaches) {
+                if(!arch.isVisited()) {
+                    attachEmptyCheck = Optional.of(arch);
+                }
             }
-        }
-        if(attach.isPresent()) {
-            attach.get().turnHighlight();
-            //TODO: ВСТАВИТЬ ОЖИДАНИЕ
-            //attach.get().turnHighlight();
-            attach.get().visit();
-            //curNode.turnHighlight();
-            curNode.visit();
-            Node[] nodes = attach.get().getTransitNodes();
-            if(nodes[0].isVisited()) {
-                curNode = nodes[1];
+            if(attachEmptyCheck.isPresent()) {
+                attachEmptyCheck.get().turnHighlight();
+                curNode.turnHighlight();
+                curNode.visit();
+                //TODO: ВСТАВИТЬ ОЖИДАНИЕ
+                final Arch attach = attachEmptyCheck.get();
+                PauseTransition archPause = getArchPause(attach);
+                archPause.play();
             }
             else {
-                curNode = nodes[0];
+                return;
             }
-            runNext(curNode);
-        }
-        else {
-            return;
-        }
+        });
+        nodePause.play();
         return;
+    }
+
+    private PauseTransition getArchPause(Arch attach) {
+        PauseTransition archPause = new PauseTransition(Duration.millis(500));
+        archPause.setOnFinished(actionEvent2 -> {
+            attach.turnHighlight();
+            attach.visit();
+            Node[] nodes = attach.getTransitNodes();
+            if(nodes[0].isVisited()) {
+                try {
+                    runNext(nodes[1]);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            else {
+                try {
+                    runNext(nodes[0]);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+        return archPause;
     }
 
     private ToolBar toolBarInit() {
