@@ -154,29 +154,35 @@ public class Main extends Application {
 
     //TODO: ЗДЕСЬ РАСПОЛАГАЕТСЯ ИНИЦИАЛИЗАЦИЯ ПАНЕЛИ АЛГОРИТМА. В НЕЙ НУЖНО РЕАЛИЗОВАТЬ ВЕСЬ АЛГОРИТМ ПОИСКА МОСТА.
     private VBox bridgeSearchInit() {
+        Label algSpeedLabel = new Label("Speed of visualisation");
+        Slider algorythmSpeed = new Slider(0d, 100, 0.1);
+        algorythmSpeed.setShowTickLabels(true);
+        algorythmSpeed.setShowTickMarks(true);
+
+
         Button startRun = new Button("Start graph run");
         startRun.setId("startAlgo");
         startRun.setOnAction(actionEvent -> {
             try {
-                runInDepth();
+                runInDepth(algorythmSpeed.getValue());
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         });
 
-        VBox algorythmTab = new VBox(startRun);
+        VBox algorythmTab = new VBox(algSpeedLabel, algorythmSpeed, startRun);
         algorythmTab.setId("algorythmTab");
         return algorythmTab;
     }
 
-    private void runInDepth() throws InterruptedException {
+    private void runInDepth(double visSpeed) throws InterruptedException {
         Node curNode = graph.findWithNum(0);
-        runNext(curNode);
+        runNext(curNode, visSpeed);
     }
 
-    private synchronized void runNext(final Node curNode) throws InterruptedException {
+    private synchronized void runNext(final Node curNode, double visSpeed) throws InterruptedException {
         curNode.turnHighlight();
-        PauseTransition nodePause = new PauseTransition(Duration.millis(500));
+        PauseTransition nodePause = new PauseTransition(Duration.seconds(1/visSpeed));
         nodePause.setOnFinished(actionEvent -> {
             Vector<Arch> attaches = curNode.getAttachments();
             Optional<Arch> attachEmptyCheck = Optional.empty();
@@ -189,9 +195,8 @@ public class Main extends Application {
                 attachEmptyCheck.get().turnHighlight();
                 curNode.turnHighlight();
                 curNode.visit();
-                //TODO: ВСТАВИТЬ ОЖИДАНИЕ
                 final Arch attach = attachEmptyCheck.get();
-                PauseTransition archPause = getArchPause(attach);
+                PauseTransition archPause = getArchPause(attach, visSpeed);
                 archPause.play();
             }
             else {
@@ -202,22 +207,22 @@ public class Main extends Application {
         return;
     }
 
-    private PauseTransition getArchPause(Arch attach) {
-        PauseTransition archPause = new PauseTransition(Duration.millis(500));
+    private PauseTransition getArchPause(Arch attach, final double visSpeed) {
+        PauseTransition archPause = new PauseTransition(Duration.seconds(1/visSpeed));
         archPause.setOnFinished(actionEvent2 -> {
             attach.turnHighlight();
             attach.visit();
             Node[] nodes = attach.getTransitNodes();
             if(nodes[0].isVisited()) {
                 try {
-                    runNext(nodes[1]);
+                    runNext(nodes[1], visSpeed);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             }
             else {
                 try {
-                    runNext(nodes[0]);
+                    runNext(nodes[0], visSpeed);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
