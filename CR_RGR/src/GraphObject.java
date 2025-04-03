@@ -15,10 +15,6 @@ public abstract class GraphObject {
         figure.setFill(Color.LIGHTGRAY);
     }
 
-    public boolean isHighlight() {
-        return highlight;
-    }
-
     public void turnHighlight() {
         if(highlight) {
             highlight = false;

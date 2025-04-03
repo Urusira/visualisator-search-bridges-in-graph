@@ -9,13 +9,6 @@
     -fx-spacing: 2em;
 }
 
-#algorythmTab {
-    -fx-background-color: LIGHTGRAY;
-    -fx-pref-width: 20em;
-    -fx-alignment: top-center;
-    -fx-spacing: 2em;
-}
-
 #modeSelectBox {
     -fx-alignment: center;
     -fx-spacing: 1em;
@@ -24,6 +17,18 @@
 #savLoadResBox {
     -fx-alignment: center;
     -fx-spacing: 1em;
+}
+
+#algorythmTab {
+    -fx-background-color: LIGHTGRAY;
+    -fx-pref-width: 20em;
+    -fx-alignment: top-center;
+    -fx-spacing: 2em;
+}
+
+#startAlgo {
+    -fx-pref-width: 16em;
+    -fx-alignment: center;
 }
 
 .button {

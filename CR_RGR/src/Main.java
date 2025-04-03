@@ -13,6 +13,7 @@ import javafx.stage.Stage;
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.Stream;
 
 
 public class Main extends Application {
@@ -151,10 +152,51 @@ public class Main extends Application {
 
     //TODO: ЗДЕСЬ РАСПОЛАГАЕТСЯ ИНИЦИАЛИЗАЦИЯ ПАНЕЛИ АЛГОРИТМА. В НЕЙ НУЖНО РЕАЛИЗОВАТЬ ВЕСЬ АЛГОРИТМ ПОИСКА МОСТА.
     private VBox bridgeSearchInit() {
+        Button startRun = new Button("Start graph run");
+        startRun.setId("startAlgo");
+        startRun.setOnAction(actionEvent -> {
+            runInDepth();
+        });
 
-        VBox algorythmTab = new VBox();
+        VBox algorythmTab = new VBox(startRun);
         algorythmTab.setId("algorythmTab");
         return algorythmTab;
+    }
+
+    private void runInDepth() {
+        Node curNode = graph.findWithNum(0);
+        runNext(curNode);
+    }
+
+    private void runNext(Node curNode) {
+        curNode.turnHighlight();
+        Vector<Arch> attaches = curNode.getAttachments();
+        Optional<Arch> attach = Optional.empty();
+        for(Arch arch : attaches) {
+            if(!arch.isVisited()) {
+                attach = Optional.of(arch);
+            }
+        }
+        if(attach.isPresent()) {
+            attach.get().turnHighlight();
+            //TODO: ВСТАВИТЬ ОЖИДАНИЕ
+            //attach.get().turnHighlight();
+            attach.get().visit();
+            //curNode.turnHighlight();
+            curNode.visit();
+            Node[] nodes = attach.get().getTransitNodes();
+            if(nodes[0].isVisited()) {
+                curNode = nodes[1];
+            }
+            else {
+                curNode = nodes[0];
+            }
+            runNext(curNode);
+        }
+        else {
+            return;
+        }
+        return;
     }
 
     private ToolBar toolBarInit() {
@@ -277,6 +319,7 @@ public class Main extends Application {
                     break;
                 }
                 case manualModes.DELETE: {
+                    //TODO: ПРИ УДАЛЕНИИ НАДО ОБНОВИТЬ НУМЕРАЦИЮ ВСЕХ ВЕРШИН ДЛЯ ИЗБЕЖАНИЯ ДЫР
                     graph.deleteNode(node, drawSpace);
                     break;
                 }
