@@ -1,6 +1,6 @@
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
+import javafx.scene.text.Text;
 
 import java.util.Vector;
 
@@ -9,6 +9,8 @@ public class Node extends GraphObject implements Comparable{
     private final int number;
     private StackPane container;
     private final Vector<Arch> attachments = new Vector<>();
+    private nodeColors color;
+    private int amoVisit;
 
     public Coords getPos() {
         return pos;
@@ -24,6 +26,37 @@ public class Node extends GraphObject implements Comparable{
         number = num;
 
         container = circleContainer;
+
+        this.color = nodeColors.WHITE;
+
+        amoVisit = 0;
+    }
+
+    public void setColor(nodeColors color) {
+        this.color = color;
+    }
+
+    public void recolor() {
+        switch (amoVisit) {
+            case 0 -> {
+                figure.setFill(Color.GRAY);
+                break;
+            }
+            case 1 -> {
+                figure.setFill(Color.BLACK);
+                Text txt = (Text) container.getChildren().getLast();
+                txt.setStroke(Color.WHITE);
+                break;
+            }
+            default -> {
+                return;
+            }
+        }
+        amoVisit++;
+    }
+
+    public nodeColors getColor() {
+        return color;
     }
 
     public void addAttachment(Arch arch) {

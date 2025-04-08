@@ -1,6 +1,7 @@
 import javafx.scene.layout.Pane;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 public class Graph {
     private final TreeMap<Node, LinkedHashSet<Node>> graph;
@@ -92,6 +93,10 @@ public class Graph {
 
     public Vector<Node> getNodes() {
         return new Vector<>(graph.keySet());
+    }
+
+    public Vector<Node> getAttaches(Node node) {
+        return new Vector<>(graph.get(node).stream().toList());
     }
 
     public boolean isNear(Coords checkableCoords, double minDist) {

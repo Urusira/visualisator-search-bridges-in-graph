@@ -1,7 +1,8 @@
+import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.geometry.Orientation;
-import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
@@ -15,7 +16,7 @@ import javafx.util.Duration;
 
 import java.io.*;
 import java.util.*;
-import java.util.stream.Stream;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class Main extends Application {
@@ -33,6 +34,8 @@ public class Main extends Application {
 
     private static Stage mainStage;
     private static Pane drawSpace;
+
+    private static Vector<Node> algoStack;
 
     public static void main(String[] args) throws FileNotFoundException {
         Scanner sc = new Scanner(new File("titles.txt"));
@@ -138,10 +141,40 @@ public class Main extends Application {
 
         nodesAmount.setPromptText("Nodes amount");
         archesAmount.setPromptText("Arches amount");
+
         HBox randomParams = new HBox(nodesAmount, archesAmount);
+
         Button randomGraph = new Button("Generate");
         randomGraph.setOnAction(actionEvent -> {
-            randomGraph(Integer.parseInt(nodesAmount.getText()), Integer.parseInt(archesAmount.getText()));
+            int nodAmoInt;
+            int archAmoInt;
+
+            try {
+                nodAmoInt = Integer.parseInt(nodesAmount.getText());
+            } catch (NumberFormatException e) {
+                wrongInputAlert("Insert nodes amount!");
+                return;
+            }
+
+            int maxArches = ((nodAmoInt-1)*nodAmoInt)/2;
+
+            if(nodAmoInt > maxArches || archesAmount.getText().isEmpty()) {
+                archAmoInt = maxArches;
+            }
+            else {
+                try {
+                    archAmoInt = Integer.parseInt(archesAmount.getText());
+                } catch (NumberFormatException e) {
+                    wrongInputAlert("Incorrect input");
+                    return;
+                }
+            }
+            if (nodAmoInt >= 0 && archAmoInt >= 0) {
+                randomGraph(nodAmoInt, archAmoInt);
+            }
+            else {
+                wrongInputAlert("Nodes amount and arches amount cannot be zero!");
+            }
         });
 
         HBox modeSelectBox = new HBox(nodesMode, archesMode, delMode);
@@ -154,81 +187,112 @@ public class Main extends Application {
 
     //TODO: ЗДЕСЬ РАСПОЛАГАЕТСЯ ИНИЦИАЛИЗАЦИЯ ПАНЕЛИ АЛГОРИТМА. В НЕЙ НУЖНО РЕАЛИЗОВАТЬ ВЕСЬ АЛГОРИТМ ПОИСКА МОСТА.
     private VBox bridgeSearchInit() {
+        AtomicInteger actualStep = new AtomicInteger(0);
+
         Label algSpeedLabel = new Label("Speed of visualisation");
-        Slider algorythmSpeed = new Slider(0d, 100, 0.1);
+        Slider algorythmSpeed = new Slider(1d, 10, 1);
         algorythmSpeed.setShowTickLabels(true);
         algorythmSpeed.setShowTickMarks(true);
 
+        Button generateAlgo = new Button("Fill stack");
+        generateAlgo.setOnAction(actionEvent -> {
+            // Вызов алгоритма. Он сразу заполняет стек, а уже после будет производиться перемещение по стеку - просмотр
+            // визуализации. Я не знаю, куда ещё это засунуть...
+            Node curNode = graph.getNodes().getFirst();
+            algoStack = new Vector<>();
+            runInDepth(curNode);
+        });
 
-        Button startRun = new Button("Start graph run");
+        Button startRun = new Button("Start auto");
         startRun.setId("startAlgo");
         startRun.setOnAction(actionEvent -> {
-            try {
-                runInDepth(algorythmSpeed.getValue());
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+            Timeline timeline = new Timeline();
+
+            for(int i = 0; i < algoStack.size(); i++) {
+                final int index = i;
+                KeyFrame keyFrame1 = new KeyFrame(Duration.millis(
+                        index*(1000/algorythmSpeed.getValue())),actionEvent1 -> {
+                            algoStack.get(index).turnHighlight();
+                        });
+                KeyFrame keyFrame2 = new KeyFrame(Duration.millis(
+                        index*(1000/algorythmSpeed.getValue())+(1000/algorythmSpeed.getValue())), actionEvent2 -> {
+                            algoStack.get(index).turnHighlight();
+                            algoStack.get(index).recolor();
+                        });
+                timeline.getKeyFrames().add(keyFrame1);
+                timeline.getKeyFrames().add(keyFrame2);
+            }
+            timeline.play();
+        });
+
+        Button previous = new Button("Prevoius");
+        previous.setDisable(true);
+
+        Button next = new Button("Next");
+
+        previous.setOnAction(actionEvent -> {
+            next.setDisable(false);
+            actualStep.decrementAndGet();
+            algoStack.get(actualStep.get()).turnHighlight();
+            if(actualStep.get() < algoStack.size()) {
+                algoStack.get(actualStep.get()+1).turnHighlight();
+            }
+            if(actualStep.get() <= 0) {
+                previous.setDisable(true);
             }
         });
 
-        VBox algorythmTab = new VBox(algSpeedLabel, algorythmSpeed, startRun);
+        next.setOnAction(actionEvent -> {
+            previous.setDisable(false);
+            algoStack.get(actualStep.get()).turnHighlight();
+            if(actualStep.get() > 0) {
+                algoStack.get(actualStep.get()-1).turnHighlight();
+                //algoStack.get(actualStep.get()-1).recolor();
+            }
+            actualStep.incrementAndGet();
+            if(actualStep.get() >= algoStack.size()) {
+                next.setDisable(true);
+            }
+        });
+
+
+        HBox manualSteps = new HBox(previous, next);
+
+
+        Button debugReload = new Button("debugReload");
+        debugReload.setOnAction(actionEvent -> {
+            try {
+                loadGraph(true);
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+            algoStack = new Vector<>();
+            actualStep.set(0);
+            Node curNode = graph.getNodes().getFirst();
+            algoStack = new Vector<>();
+            runInDepth(curNode);
+            next.setDisable(false);
+            previous.setDisable(true);
+        });
+
+        VBox algorythmTab = new VBox(generateAlgo, algSpeedLabel, algorythmSpeed, startRun, manualSteps,debugReload);
         algorythmTab.setId("algorythmTab");
         return algorythmTab;
     }
 
-    private void runInDepth(double visSpeed) throws InterruptedException {
-        Node curNode = graph.findWithNum(0);
-        runNext(curNode, visSpeed);
-    }
+    //TODO: НАДО ПОЛУЧАТЬ НОДУ, БРАТЬ СОЕДИНЁННЫЕ С НЕЙ, ВЫЗВЫАТЬ МЕТОД НА НЕЁ
+    private void runInDepth(final Node curNode) {
+        curNode.setColor(nodeColors.GRAY);
+        algoStack.add(curNode);
 
-    private synchronized void runNext(final Node curNode, double visSpeed) throws InterruptedException {
-        curNode.turnHighlight();
-        PauseTransition nodePause = new PauseTransition(Duration.seconds(1/visSpeed));
-        nodePause.setOnFinished(actionEvent -> {
-            Vector<Arch> attaches = curNode.getAttachments();
-            Optional<Arch> attachEmptyCheck = Optional.empty();
-            for(Arch arch : attaches) {
-                if(!arch.isVisited()) {
-                    attachEmptyCheck = Optional.of(arch);
-                }
+        Vector<Node> nodes = graph.getAttaches(curNode);
+        for(Node node : nodes) {
+            if(node.getColor() == nodeColors.WHITE) {
+                runInDepth(node);
             }
-            if(attachEmptyCheck.isPresent()) {
-                attachEmptyCheck.get().turnHighlight();
-                curNode.turnHighlight();
-                curNode.visit();
-                final Arch attach = attachEmptyCheck.get();
-                PauseTransition archPause = getArchPause(attach, visSpeed);
-                archPause.play();
-            }
-            else {
-                return;
-            }
-        });
-        nodePause.play();
-        return;
-    }
-
-    private PauseTransition getArchPause(Arch attach, final double visSpeed) {
-        PauseTransition archPause = new PauseTransition(Duration.seconds(1/visSpeed));
-        archPause.setOnFinished(actionEvent2 -> {
-            attach.turnHighlight();
-            attach.visit();
-            Node[] nodes = attach.getTransitNodes();
-            if(nodes[0].isVisited()) {
-                try {
-                    runNext(nodes[1], visSpeed);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            else {
-                try {
-                    runNext(nodes[0], visSpeed);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
-        return archPause;
+        }
+        curNode.setColor(nodeColors.BLACK);
+        algoStack.add(curNode);
     }
 
     private ToolBar toolBarInit() {
@@ -260,7 +324,7 @@ public class Main extends Application {
         MenuItem loadItem = new MenuItem("Load");
         loadItem.setOnAction(actionEvent -> {
             try {
-                loadGraph();
+                loadGraph(false);
             } catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
             }
@@ -420,13 +484,6 @@ public class Main extends Application {
 
         Vector<Node> nodes = graph.getNodes();
 
-        int max = ((nodesAmount-1)*nodesAmount)/2;
-
-        if(archesAmount > max) {
-
-            archesAmount = max;
-        }
-
         for(int countArches = 0; countArches < archesAmount; countArches++) {
             boolean tryAttach = false;
             while(!tryAttach) {
@@ -488,19 +545,21 @@ public class Main extends Application {
         loggerPush("SAVING\t\tSaved done");
     }
 
-    public void loadGraph() throws FileNotFoundException {
+    public void loadGraph(boolean reload) throws FileNotFoundException {
         loggerPush("LOADING\t\tLoading...");
         Scanner sc;
 
-        FileChooser fc = new FileChooser();
-        fc.setTitle("Selection graph file");
-        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Graphs files", "*.graph", "*.txt"));
-        try {
-            fc.setInitialDirectory(choosenFile.getParentFile());
-        } catch (NullPointerException e) {
-            loggerPush("WARNING\t\tBuffer haven't file. Init select new fiile.");
+        if(!reload){
+            FileChooser fc = new FileChooser();
+            fc.setTitle("Selection graph file");
+            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Graphs files", "*.graph", "*.txt"));
+            try {
+                fc.setInitialDirectory(choosenFile.getParentFile());
+            } catch (NullPointerException e) {
+                loggerPush("WARNING\t\tBuffer haven't file. Init select new file.");
+            }
+            choosenFile = fc.showOpenDialog(mainStage);
         }
-        choosenFile = fc.showOpenDialog(mainStage);
         try {
             sc = new Scanner(choosenFile);
             loggerPush("LOADING\t\tReading file.");
@@ -509,6 +568,7 @@ public class Main extends Application {
             return;
         } catch (NullPointerException e) {
             loggerPush("WARNING\t\tFile not choose.");
+            loadGraph(false);
             return;
         }
 
@@ -570,14 +630,11 @@ public class Main extends Application {
         alert.setTitle("Wrong input");
         alert.setHeaderText(null);
         alert.setContentText(desc);
-        alert.setOnCloseRequest(dialogEvent -> {
-            insertRadiusNodes();
-        });
         alert.showAndWait();
     }
     
     //TODO: ЗДЕСЬ БУДЕТ ВЫВОД ТЕКСТА В ПАНЕЛЬКУ ВНИЗУ ПРОГРАММЫ
     private void loggerPush(String text) {
-        System.out.println(text);
+        //System.out.println(text);
     }
 }
