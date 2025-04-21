@@ -9,8 +9,7 @@ public class Node extends GraphObject implements Comparable{
     private final int number;
     private StackPane container;
     private final Vector<Arch> attachments = new Vector<>();
-    private nodeColors color;
-    private int amoVisit;
+    private Color color;
 
     public Coords getPos() {
         return pos;
@@ -27,35 +26,26 @@ public class Node extends GraphObject implements Comparable{
 
         container = circleContainer;
 
-        this.color = nodeColors.WHITE;
-
-        amoVisit = 0;
+        this.color = Color.WHITE;
     }
 
-    public void setColor(nodeColors color) {
+    public void setHiddenColor(Color color) {
         this.color = color;
     }
 
-    public void recolor() {
-        switch (amoVisit) {
-            case 0 -> {
-                figure.setFill(Color.GRAY);
-                break;
-            }
-            case 1 -> {
-                figure.setFill(Color.BLACK);
-                Text txt = (Text) container.getChildren().getLast();
-                txt.setStroke(Color.WHITE);
-                break;
-            }
-            default -> {
-                return;
-            }
+    public void setColor(Color color) {
+        figure.setFill(color);
+        if(color == Color.BLACK) {
+            Text txTemp = (Text) container.getChildren().getLast();
+            txTemp.setStroke(Color.WHITE);
         }
-        amoVisit++;
+        if(color == Color.GRAY || color == Color.WHITE) {
+            Text txTemp = (Text) container.getChildren().getLast();
+            txTemp.setStroke(Color.BLACK);
+        }
     }
 
-    public nodeColors getColor() {
+    public Color getColor() {
         return color;
     }
 
@@ -83,5 +73,9 @@ public class Node extends GraphObject implements Comparable{
 
     public void delAttach(Arch arch) {
         attachments.remove(arch);
+    }
+
+    public Text getText() {
+        return (Text) container.getChildren().getLast();
     }
 }

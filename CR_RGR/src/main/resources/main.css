@@ -19,7 +19,7 @@
     -fx-spacing: 1em;
 }
 
-#algorythmTab {
+#algoContolPanel {
     -fx-background-color: LIGHTGRAY;
     -fx-pref-width: 20em;
     -fx-alignment: top-center;
@@ -28,6 +28,11 @@
 
 #startAlgo {
     -fx-pref-width: 16em;
+    -fx-alignment: center;
+}
+
+#algorithmBlocker {
+    -fx-background-color: rgba(220, 220, 220, 0.75);
     -fx-alignment: center;
 }
 

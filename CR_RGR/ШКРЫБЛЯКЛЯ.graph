@@ -1,6 +1,6 @@
 FILE_TYPE-GRAPH
-2025-04-08T14:24:32.526219500
-0 attached[1, 2, 14], coords[653.6, 24.799999999999997]
+2025-04-08T19:26:10.121789100
+0 attached[1, 2], coords[653.6, 24.799999999999997]
 1 attached[0, 3, 4], coords[295.2, 232.0]
 2 attached[0, 5, 6], coords[1037.6, 232.8]
 3 attached[1, 12, 13], coords[117.6, 423.2]
@@ -14,4 +14,3 @@ FILE_TYPE-GRAPH
 11 attached[6], coords[1153.6, 676.0]
 12 attached[3], coords[220.0, 676.8]
 13 attached[3], coords[32.8, 676.0]
-14 attached[0], coords[650.4, 232.0]

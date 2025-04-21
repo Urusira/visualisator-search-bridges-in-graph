@@ -16,15 +16,14 @@ public abstract class GraphObject {
         figure.setStroke(Color.GRAY);
     }
 
-    public void turnHighlight() {
-        if(highlight) {
-            highlight = false;
-            figure.setStroke(Color.BLACK);
-        }
-        else {
-            highlight = true;
-            figure.setStroke(Color.LIME);
-        }
+    public void turnOffHighlight() {
+        highlight = false;
+        figure.setStroke(Color.BLACK);
+    }
+
+    public void turnOnHighlight() {
+        highlight = true;
+        figure.setStroke(Color.LIME);
     }
 
     public void select() {

@@ -1,20 +1,23 @@
 import javafx.animation.KeyFrame;
-import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.geometry.Orientation;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.util.Pair;
 
 import java.io.*;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,7 +38,12 @@ public class Main extends Application {
     private static Stage mainStage;
     private static Pane drawSpace;
 
-    private static Vector<Node> algoStack;
+    private static Vector<Pair<Node, Color>> algoStack;
+    private static Vector<Pair<Node, Color>> reverseAlgoStack;
+
+    private static AnchorPane algoPanelBlocker;
+
+    private final AtomicInteger actualStep = new AtomicInteger(0);
 
     public static void main(String[] args) throws FileNotFoundException {
         Scanner sc = new Scanner(new File("titles.txt"));
@@ -90,8 +98,16 @@ public class Main extends Application {
 
         Tab graphBuildTab = new Tab("Graph building", graphBuilderInit());
         graphBuildTab.closableProperty().set(false);
-        Tab algorythmTab = new Tab("Bridges search", bridgeSearchInit());
+        graphBuildTab.setOnSelectionChanged(_ -> {
+            algoPanelBlocker.setVisible(true);
+        });
+
+        Tab algorythmTab = new Tab("Bridges search", algoPanelInit());
         algorythmTab.closableProperty().set(false);
+        algorythmTab.setOnSelectionChanged(_ -> {
+            manualDraw_Mode = manualModes.NONE;
+        });
+
         TabPane rightPanel = new TabPane(graphBuildTab, algorythmTab);
 
         ToolBar toolBar = toolBarInit();
@@ -186,113 +202,137 @@ public class Main extends Application {
     }
 
     //TODO: ЗДЕСЬ РАСПОЛАГАЕТСЯ ИНИЦИАЛИЗАЦИЯ ПАНЕЛИ АЛГОРИТМА. В НЕЙ НУЖНО РЕАЛИЗОВАТЬ ВЕСЬ АЛГОРИТМ ПОИСКА МОСТА.
-    private VBox bridgeSearchInit() {
-        AtomicInteger actualStep = new AtomicInteger(0);
-
+    private StackPane algoPanelInit() {
         Label algSpeedLabel = new Label("Speed of visualisation");
-        Slider algorythmSpeed = new Slider(1d, 10, 1);
-        algorythmSpeed.setShowTickLabels(true);
-        algorythmSpeed.setShowTickMarks(true);
-
-        Button generateAlgo = new Button("Fill stack");
-        generateAlgo.setOnAction(actionEvent -> {
-            // Вызов алгоритма. Он сразу заполняет стек, а уже после будет производиться перемещение по стеку - просмотр
-            // визуализации. Я не знаю, куда ещё это засунуть...
-            Node curNode = graph.getNodes().getFirst();
-            algoStack = new Vector<>();
-            runInDepth(curNode);
-        });
+        Slider algorithmSpeed = new Slider(1d, 10, 1);
+        algorithmSpeed.setShowTickLabels(true);
+        algorithmSpeed.setShowTickMarks(true);
 
         Button startRun = new Button("Start auto");
         startRun.setId("startAlgo");
+
+        Button previous = new Button("Previous");
+        previous.setDisable(true);
+
+        Button next = new Button("Next");
+
         startRun.setOnAction(actionEvent -> {
+            previous.setDisable(true);
+            next.setDisable(true);
             Timeline timeline = new Timeline();
 
             for(int i = 0; i < algoStack.size(); i++) {
                 final int index = i;
                 KeyFrame keyFrame1 = new KeyFrame(Duration.millis(
-                        index*(1000/algorythmSpeed.getValue())),actionEvent1 -> {
-                            algoStack.get(index).turnHighlight();
-                        });
-                KeyFrame keyFrame2 = new KeyFrame(Duration.millis(
-                        index*(1000/algorythmSpeed.getValue())+(1000/algorythmSpeed.getValue())), actionEvent2 -> {
-                            algoStack.get(index).turnHighlight();
-                            algoStack.get(index).recolor();
+                        index*(1000/algorithmSpeed.getValue())+(1000/algorithmSpeed.getValue())), actionEvent2 -> {
+                                nextStep();
+
                         });
                 timeline.getKeyFrames().add(keyFrame1);
-                timeline.getKeyFrames().add(keyFrame2);
             }
+            timeline.setOnFinished(_ -> {
+                previous.setDisable(false);
+            });
             timeline.play();
         });
 
-        Button previous = new Button("Prevoius");
-        previous.setDisable(true);
-
-        Button next = new Button("Next");
-
         previous.setOnAction(actionEvent -> {
             next.setDisable(false);
-            actualStep.decrementAndGet();
-            algoStack.get(actualStep.get()).turnHighlight();
-            if(actualStep.get() < algoStack.size()) {
-                algoStack.get(actualStep.get()+1).turnHighlight();
-            }
+            backStep();
             if(actualStep.get() <= 0) {
                 previous.setDisable(true);
+                actualStep.set(0);
             }
         });
 
         next.setOnAction(actionEvent -> {
             previous.setDisable(false);
-            algoStack.get(actualStep.get()).turnHighlight();
-            if(actualStep.get() > 0) {
-                algoStack.get(actualStep.get()-1).turnHighlight();
-                //algoStack.get(actualStep.get()-1).recolor();
-            }
-            actualStep.incrementAndGet();
-            if(actualStep.get() >= algoStack.size()) {
+            nextStep();
+            if(actualStep.get() >= algoStack.size()-1) {
                 next.setDisable(true);
+                actualStep.set(algoStack.size()-1);
             }
         });
 
 
         HBox manualSteps = new HBox(previous, next);
 
+        AnchorPane overlay = new AnchorPane();
+        overlay.setId("algorithmBlocker");
+        overlay.setPickOnBounds(true);
 
-        Button debugReload = new Button("debugReload");
-        debugReload.setOnAction(actionEvent -> {
+        Button startButton = new Button("Start");
+        startButton.setOnAction(actionEvent -> {
+            // Вызов алгоритма. Он сразу заполняет стек, а уже после будет производиться перемещение по стеку - просмотр
+            // визуализации. Я не знаю, куда ещё это засунуть, так что сделаю пока полупрозрачную панельку старта.
             try {
-                loadGraph(true);
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
+                algoStack = new Vector<>();
+                stepInDepth(graph.getNodes().getFirst());
+                reverseAlgoStack = revResortStack(algoStack);
+                graph.getNodes().getFirst().turnOnHighlight();
+                overlay.setVisible(false);
+            } catch (NoSuchElementException e) {
+                wrongInputAlert("At first create/load/generate graph!");
             }
-            algoStack = new Vector<>();
-            actualStep.set(0);
-            Node curNode = graph.getNodes().getFirst();
-            algoStack = new Vector<>();
-            runInDepth(curNode);
-            next.setDisable(false);
-            previous.setDisable(true);
         });
 
-        VBox algorythmTab = new VBox(generateAlgo, algSpeedLabel, algorythmSpeed, startRun, manualSteps,debugReload);
-        algorythmTab.setId("algorythmTab");
-        return algorythmTab;
+        StackPane wrapStartButton = new StackPane(startButton);
+        wrapStartButton.setAlignment(Pos.CENTER);
+        AnchorPane.setTopAnchor(wrapStartButton, 0.0);
+        AnchorPane.setBottomAnchor(wrapStartButton, 0.0);
+        AnchorPane.setLeftAnchor(wrapStartButton, 0.0);
+        AnchorPane.setRightAnchor(wrapStartButton, 0.0);
+
+        overlay.getChildren().add(wrapStartButton);
+        algoPanelBlocker = overlay;
+
+        VBox algoContolPanel = new VBox(algSpeedLabel, algorithmSpeed, startRun, manualSteps);
+        algoContolPanel.setId("algoContolPanel");
+
+        return new StackPane(algoContolPanel, overlay);
+    }
+
+    private void backStep() {
+        Node node = reverseAlgoStack.get(actualStep.get()).getKey();
+        node.turnOffHighlight();
+        actualStep.getAndDecrement();
+        node = reverseAlgoStack.get(actualStep.get()).getKey();
+        Color color = reverseAlgoStack.get(actualStep.get()).getValue();
+        if (color != null){
+            node.setColor(color);
+        }
+        node.turnOnHighlight();
+    }
+
+    private void nextStep() {
+        Node node = algoStack.get(actualStep.get()).getKey();
+        node.turnOffHighlight();
+        actualStep.getAndIncrement();
+        node = algoStack.get(actualStep.get()).getKey();
+        Color color = algoStack.get(actualStep.get()).getValue();
+        if(color != null){
+            node.setColor(color);
+        }
+        node.turnOnHighlight();
     }
 
     //TODO: НАДО ПОЛУЧАТЬ НОДУ, БРАТЬ СОЕДИНЁННЫЕ С НЕЙ, ВЫЗВЫАТЬ МЕТОД НА НЕЁ
-    private void runInDepth(final Node curNode) {
-        curNode.setColor(nodeColors.GRAY);
-        algoStack.add(curNode);
+    private void stepInDepth(final Node curNode) {
+        curNode.setHiddenColor(Color.GRAY);
+        algoStack.add(new Pair<>(curNode, null));
+        algoStack.add(new Pair<>(curNode, Color.GRAY));
 
         Vector<Node> nodes = graph.getAttaches(curNode);
         for(Node node : nodes) {
-            if(node.getColor() == nodeColors.WHITE) {
-                runInDepth(node);
+            if(node.getColor() == Color.WHITE) {
+                stepInDepth(node);
+            }
+            if(!algoStack.getLast().getKey().equals(curNode)) {
+                algoStack.add(new Pair<>(curNode, null));
             }
         }
-        curNode.setColor(nodeColors.BLACK);
-        algoStack.add(curNode);
+        curNode.setHiddenColor(Color.BLACK);
+        algoStack.add(new Pair<>(curNode, Color.BLACK));
     }
 
     private ToolBar toolBarInit() {
@@ -465,8 +505,7 @@ public class Main extends Application {
         return true;
     }
 
-
-    public void randomGraph(final int nodesAmount, int archesAmount) {
+    private void randomGraph(final int nodesAmount, int archesAmount) {
         loggerPush("RANDOM_GEN\t\tStart generating random graph.");
 
         reset();
@@ -495,10 +534,8 @@ public class Main extends Application {
         }
     }
 
-
-
-    public void saveGraph(boolean asNew) throws IOException {
-        var now = java.time.LocalDateTime.now();
+    private void saveGraph(boolean asNew) throws IOException {
+        var now = LocalDateTime.now();
         loggerPush("Saving...");
 
         if(asNew) {
@@ -534,7 +571,7 @@ public class Main extends Application {
                     node.getNumber()+
                             " attached["+
                             graph.getStrValues(node)+
-                            "], coords["+
+                            "], cords["+
                             node.getPos().toString()+
                             "]"
                     );
@@ -545,7 +582,9 @@ public class Main extends Application {
         loggerPush("SAVING\t\tSaved done");
     }
 
-    public void loadGraph(boolean reload) throws FileNotFoundException {
+    private void loadGraph(boolean reload) throws FileNotFoundException {
+        algoPanelBlocker.setVisible(true);
+
         loggerPush("LOADING\t\tLoading...");
         Scanner sc;
 
@@ -568,7 +607,10 @@ public class Main extends Application {
             return;
         } catch (NullPointerException e) {
             loggerPush("WARNING\t\tFile not choose.");
-            loadGraph(false);
+                                                                            //TODO: Дебаговая штука, удалить в финале
+                                                                            if(reload) {
+                                                                                loadGraph(false);
+                                                                            }
             return;
         }
 
@@ -588,13 +630,13 @@ public class Main extends Application {
             String loadedLine = sc.nextLine();
             loggerPush("LOADING\t\tGet new line.");
 
-            String[] coordTxt = loadedLine.substring(loadedLine.lastIndexOf("["), loadedLine.lastIndexOf("]")).replaceAll("[^\\d.\\s]", "").split(" ");
+            String[] cordTxt = loadedLine.substring(loadedLine.lastIndexOf("["), loadedLine.lastIndexOf("]")).replaceAll("[^\\d.\\s]", "").split(" ");
 
             int number = Integer.parseInt(loadedLine.substring(0, loadedLine.indexOf(" ")));
             loggerPush("LOADING\t\tGet node number - "+number);
 
-            Coords coords = new Coords(Double.parseDouble(coordTxt[0]), Double.parseDouble(coordTxt[1]));
-            loggerPush("LOADING\t\tGet node coords: "+coords);
+            Coords coords = new Coords(Double.parseDouble(cordTxt[0]), Double.parseDouble(cordTxt[1]));
+            loggerPush("LOADING\t\tGet node cords: "+coords);
 
 
             Node nodeTemp = placeGraphNode(coords, number);
@@ -636,5 +678,40 @@ public class Main extends Application {
     //TODO: ЗДЕСЬ БУДЕТ ВЫВОД ТЕКСТА В ПАНЕЛЬКУ ВНИЗУ ПРОГРАММЫ
     private void loggerPush(String text) {
         //System.out.println(text);
+    }
+
+    private Vector<Pair<Node, Color>> revResortStack(Vector<Pair<Node, Color>> stack) {
+        Vector<Pair<Node, Color>> result = new Vector<>(stack);
+        result.replaceAll(para -> {
+            try {
+                if (para.getValue().equals(Color.GRAY)) {
+                    return new Pair<>(para.getKey(), Color.WHITE);
+                }
+                if (para.getValue().equals(Color.BLACK)) {
+                    return new Pair<>(para.getKey(), Color.GRAY);
+                }
+            } catch (NullPointerException _) {}
+            return para;
+        });
+
+        List<Pair<Node, Color>> toSkip = new ArrayList<>();
+
+        for(int i = result.size()-1; i > 0; i--) {
+            var temp = result.get(i);
+            if(temp.getValue() != null && !toSkip.contains(temp)) {
+                int index = i;
+                while(result.get(index).getValue()==null || result.get(index).getKey() == result.get(i).getKey()){
+                    index--;
+                    if(index < 0 || (result.get(index).getKey()!=result.get(i).getKey() && result.get(index).getValue()==null)) {break;}
+                }
+                index++;
+                result.remove(i);
+                result.add(index, temp);
+                toSkip.add(temp);
+                i++;
+            }
+        }
+// ПРОБЛЕМА В ТОМ, ЧТО МОЖЕТ БЫТЬ ДВЕ ПОКРАСКИ ПОДРЯД И ТОГДА АЛГОРИТМ ПЕРЕНОСИТ ПЕРВУЮ, НО СКИПАЕТ ОСТАЛЬНЫЕ
+        return result;
     }
 }
