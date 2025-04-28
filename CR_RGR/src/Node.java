@@ -10,6 +10,8 @@ public class Node extends GraphObject implements Comparable{
     private StackPane container;
     private final Vector<Arch> attachments = new Vector<>();
     private Color color;
+    private int tin = -1;
+    private int low = -1;
 
     public Coords getPos() {
         return pos;
@@ -77,5 +79,21 @@ public class Node extends GraphObject implements Comparable{
 
     public Text getText() {
         return (Text) container.getChildren().getLast();
+    }
+
+    public void setLow(int low) {
+        this.low = low;
+    }
+
+    public void setTin(int tin) {
+        this.tin = tin;
+    }
+
+    public int getLow() {
+        return low;
+    }
+
+    public int getTin() {
+        return tin;
     }
 }

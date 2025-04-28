@@ -45,6 +45,8 @@ public class Main extends Application {
 
     private final AtomicInteger actualStep = new AtomicInteger(0);
 
+    private int timer = 0;
+
     public static void main(String[] args) throws FileNotFoundException {
         Scanner sc = new Scanner(new File("titles.txt"));
         while (sc.hasNextLine()) {
@@ -100,6 +102,18 @@ public class Main extends Application {
         graphBuildTab.closableProperty().set(false);
         graphBuildTab.setOnSelectionChanged(_ -> {
             algoPanelBlocker.setVisible(true);
+            timer = 0;
+            graph.getNodes().forEach(node -> {
+                node.setTin(-1);
+                node.setLow(-1);
+                node.setColor(Color.WHITE);
+                node.turnOffHighlight();
+            });
+            actualStep.set(0);
+            try{
+                algoStack.clear();
+                reverseAlgoStack.clear();
+            } catch (NullPointerException _){}
         });
 
         Tab algorythmTab = new Tab("Bridges search", algoPanelInit());
@@ -221,7 +235,7 @@ public class Main extends Application {
             next.setDisable(true);
             Timeline timeline = new Timeline();
 
-            for(int i = 0; i < algoStack.size(); i++) {
+            for(int i = 0; i < algoStack.size()-1; i++) {
                 final int index = i;
                 KeyFrame keyFrame1 = new KeyFrame(Duration.millis(
                         index*(1000/algorithmSpeed.getValue())+(1000/algorithmSpeed.getValue())), actionEvent2 -> {
@@ -250,7 +264,6 @@ public class Main extends Application {
             nextStep();
             if(actualStep.get() >= algoStack.size()-1) {
                 next.setDisable(true);
-                actualStep.set(algoStack.size()-1);
             }
         });
 
@@ -263,11 +276,9 @@ public class Main extends Application {
 
         Button startButton = new Button("Start");
         startButton.setOnAction(actionEvent -> {
-            // Вызов алгоритма. Он сразу заполняет стек, а уже после будет производиться перемещение по стеку - просмотр
-            // визуализации. Я не знаю, куда ещё это засунуть, так что сделаю пока полупрозрачную панельку старта.
             try {
                 algoStack = new Vector<>();
-                stepInDepth(graph.getNodes().getFirst());
+                stepInDepth(graph.getNodes().getFirst(), null);
                 reverseAlgoStack = revResortStack(algoStack);
                 graph.getNodes().getFirst().turnOnHighlight();
                 overlay.setVisible(false);
@@ -293,6 +304,9 @@ public class Main extends Application {
     }
 
     private void backStep() {
+        if(actualStep.get() >= algoStack.size()-1) {
+            actualStep.set(algoStack.size()-1);
+        }
         Node node = reverseAlgoStack.get(actualStep.get()).getKey();
         node.turnOffHighlight();
         actualStep.getAndDecrement();
@@ -305,6 +319,9 @@ public class Main extends Application {
     }
 
     private void nextStep() {
+        if(actualStep.get() >= algoStack.size()-1) {
+            actualStep.set(algoStack.size()-1);
+        }
         Node node = algoStack.get(actualStep.get()).getKey();
         node.turnOffHighlight();
         actualStep.getAndIncrement();
@@ -314,18 +331,32 @@ public class Main extends Application {
             node.setColor(color);
         }
         node.turnOnHighlight();
+
     }
 
     //TODO: НАДО ПОЛУЧАТЬ НОДУ, БРАТЬ СОЕДИНЁННЫЕ С НЕЙ, ВЫЗВЫАТЬ МЕТОД НА НЕЁ
-    private void stepInDepth(final Node curNode) {
+    private void stepInDepth(final Node curNode, final Node parent) {
+        curNode.setLow(timer);
+        curNode.setTin(timer);
+        timer++;
         curNode.setHiddenColor(Color.GRAY);
         algoStack.add(new Pair<>(curNode, null));
         algoStack.add(new Pair<>(curNode, Color.GRAY));
 
         Vector<Node> nodes = graph.getAttaches(curNode);
-        for(Node node : nodes) {
-            if(node.getColor() == Color.WHITE) {
-                stepInDepth(node);
+        for(Node to : nodes) {
+            if(to.equals(parent)) continue;
+            if(to.getTin() == -1) {
+                stepInDepth(to, curNode);
+
+                curNode.setLow(Integer.min(curNode.getLow(), to.getLow()));
+
+                if(to.getLow() > curNode.getTin()) {
+                    wrongInputAlert("Мост найден! Это "+curNode.getNumber()+" - "+to.getNumber());
+                }
+            }
+            else {
+                curNode.setLow(Integer.min(curNode.getLow(), to.getTin()));
             }
             if(!algoStack.getLast().getKey().equals(curNode)) {
                 algoStack.add(new Pair<>(curNode, null));
@@ -711,7 +742,7 @@ public class Main extends Application {
                 i++;
             }
         }
-// ПРОБЛЕМА В ТОМ, ЧТО МОЖЕТ БЫТЬ ДВЕ ПОКРАСКИ ПОДРЯД И ТОГДА АЛГОРИТМ ПЕРЕНОСИТ ПЕРВУЮ, НО СКИПАЕТ ОСТАЛЬНЫЕ
+
         return result;
     }
 }
