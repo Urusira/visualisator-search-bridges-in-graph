@@ -592,10 +592,10 @@ public class Main extends Application {
             choosenFile = fc.showSaveDialog(mainStage);
         }
 
-        ObjectOutputStream writer;
+        BufferedWriter writer;
 
         try {
-            writer = new ObjectOutputStream(new FileOutputStream(choosenFile));
+            writer = new BufferedWriter(new FileWriter(choosenFile));
         } catch (NullPointerException e) {
             loggerPush("WARNING\t\tNot choose save path.");
             if(!asNew) {
@@ -606,7 +606,13 @@ public class Main extends Application {
         }
 
         loggerPush("SAVING\t\tSaving init");
-        writer.writeObject(graph);
+        writer.write("FILE_TYPE-GRAPH");
+        writer.newLine();
+        writer.write(String.valueOf(now));
+        writer.newLine();
+
+        writer.write(graph.toString());
+        writer.newLine();
         writer.close();
         titleUpdate();
         loggerPush("SAVING\t\tSaved done");
@@ -618,7 +624,6 @@ public class Main extends Application {
         loggerPush("LOADING\t\tLoading...");
         Scanner sc;
 
-        //TODO: переписать под сериализацию
         if(!reload){
             FileChooser fc = new FileChooser();
             fc.setTitle("Selection graph file");

@@ -1,13 +1,9 @@
 import javafx.scene.layout.Pane;
 
-import java.io.Serial;
-import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Stream;
 
-public class Graph implements Serializable {
-    private static final long serialVersionUID = 1L;
-
+public class Graph {
     private final TreeMap<Node, LinkedHashSet<Node>> graph;
 
     public Graph() {
@@ -45,13 +41,14 @@ public class Graph implements Serializable {
     }
 
     public String getStrValues(Node node) {
-        StringBuilder str = new StringBuilder();
+        StringBuilder str = new StringBuilder("[");
         for (var it : graph.get(node)) {
-            str.append(it.getNumber());
+            str.append(Integer.toString(it.getNumber()));
             if (it != graph.get(node).getLast()) {
                 str.append(", ");
             }
         }
+        str.append("]");
         return str.toString();
     }
 
@@ -116,12 +113,8 @@ public class Graph implements Serializable {
     public String toString() {
         StringBuilder string = new StringBuilder();
         for(Node node : getNodes()) {
-            string.append(node.getNumber())
-                    .append(" attached")
-                    .append(Arrays.toString(getNodes().toArray()))
-                    .append(", cords")
-                    .append(node.getPos().toString())
-                    .append("\n");
+            string.append(node.getNumber()).append(" attached").append(getStrValues(node)).append(", cords").append(node.getPos().toString());
+            string.append("\n");
         }
         return string.toString();
     }
