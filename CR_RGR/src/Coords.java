@@ -25,7 +25,7 @@ public class Coords {
 
     @Override
     public String toString() {
-        return X+", "+Y;
+        return "["+X+", "+Y+"]";
     }
 
     public static double minus(Coords a, Coords b) {

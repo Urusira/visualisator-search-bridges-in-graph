@@ -1,15 +1,18 @@
 import javafx.scene.layout.Pane;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Stream;
 
-public class Graph {
+public class Graph implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final TreeMap<Node, LinkedHashSet<Node>> graph;
 
     public Graph() {
         graph = new TreeMap<>();
     }
-
 
     public TreeMap<Node, LinkedHashSet<Node>> getGraph() {
         return graph;
@@ -42,18 +45,14 @@ public class Graph {
     }
 
     public String getStrValues(Node node) {
-        String result = "";
+        StringBuilder str = new StringBuilder();
         for (var it : graph.get(node)) {
-            result = result.concat(Integer.toString(it.getNumber()));
+            str.append(it.getNumber());
             if (it != graph.get(node).getLast()) {
-                result += ", ";
+                str.append(", ");
             }
         }
-        return result;
-    }
-
-    public Set<Node> getKeys() {
-        return graph.keySet();
+        return str.toString();
     }
 
     public Node findWithNum(int num) {
@@ -66,15 +65,22 @@ public class Graph {
         }
         return null;
     }
+
     public void deleteArch(Node firstNode, Node secondNode, Arch arch, Pane drawSpace) {
         drawSpace.getChildren().remove(arch.getFigure());
-        delArchInTable(firstNode, secondNode);
+        graph.get(firstNode).remove(secondNode);
+        graph.get(secondNode).remove(firstNode);
         firstNode.delAttach(arch);
         secondNode.delAttach(arch);
     }
-    public void delArchInTable(Node firstNode, Node secondNode) {
-        graph.get(firstNode).remove(secondNode);
-        graph.get(secondNode).remove(firstNode);
+
+    public Arch findArch(Node firstNode, Node secondNode) {
+        for(Arch arch : firstNode.getAttachments()){
+            if(arch.getTransitNodes()[0] == secondNode || arch.getTransitNodes()[1] == secondNode) {
+                return arch;
+            }
+        }
+        return null;
     }
 
     public void deleteNode(Node node, Pane drawSpace) {
@@ -85,9 +91,7 @@ public class Graph {
             Node[] transitNodes = arch.getTransitNodes();
             deleteArch(transitNodes[0], transitNodes[1], arch, drawSpace);
         }
-        for(var it : graph.entrySet()) {
-            it.getValue().remove(node);
-        }
+        graph.tailMap(node, false).forEach((node1, nodes) -> node1.setNumber(node1.getNumber()-1));
         graph.remove(node);
     }
 
@@ -100,11 +104,25 @@ public class Graph {
     }
 
     public boolean isNear(Coords checkableCoords, double minDist) {
-        for(var node : graph.keySet()) {
+        for(var node : getNodes()) {
             if(Coords.minus(node.getPos(), checkableCoords) < minDist) {
-                return false;
+                return true;
             }
         }
-        return true;
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder string = new StringBuilder();
+        for(Node node : getNodes()) {
+            string.append(node.getNumber())
+                    .append(" attached")
+                    .append(Arrays.toString(getNodes().toArray()))
+                    .append(", cords")
+                    .append(node.getPos().toString())
+                    .append("\n");
+        }
+        return string.toString();
     }
 }

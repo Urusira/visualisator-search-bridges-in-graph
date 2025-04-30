@@ -10,7 +10,6 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
-import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -20,6 +19,7 @@ import java.io.*;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 public class Main extends Application {
@@ -40,8 +40,11 @@ public class Main extends Application {
 
     private static Vector<Pair<Node, Color>> algoStack;
     private static Vector<Pair<Node, Color>> reverseAlgoStack;
+    private static final Vector<Arch> bridges = new Vector<>();
 
     private static AnchorPane algoPanelBlocker;
+    private final AtomicReference<Button> algoButtonNext = new AtomicReference<>();
+    private final AtomicReference<Button> algoButtonPrev = new AtomicReference<>();
 
     private final AtomicInteger actualStep = new AtomicInteger(0);
 
@@ -110,10 +113,14 @@ public class Main extends Application {
                 node.turnOffHighlight();
             });
             actualStep.set(0);
+            bridges.forEach(arch -> {if(arch!=null) arch.turnOffHighlight();});
             try{
                 algoStack.clear();
                 reverseAlgoStack.clear();
+                bridges.clear();
             } catch (NullPointerException _){}
+            algoButtonNext.get().setDisable(false);
+            algoButtonPrev.get().setDisable(true);
         });
 
         Tab algorythmTab = new Tab("Bridges search", algoPanelInit());
@@ -188,12 +195,11 @@ public class Main extends Application {
 
             int maxArches = ((nodAmoInt-1)*nodAmoInt)/2;
 
-            if(nodAmoInt > maxArches || archesAmount.getText().isEmpty()) {
-                archAmoInt = maxArches;
-            }
+            if(archesAmount.getText().isEmpty()) {archAmoInt = maxArches;}
             else {
                 try {
                     archAmoInt = Integer.parseInt(archesAmount.getText());
+                    if(archAmoInt > maxArches) {archAmoInt = maxArches;}
                 } catch (NumberFormatException e) {
                     wrongInputAlert("Incorrect input");
                     return;
@@ -215,7 +221,6 @@ public class Main extends Application {
         return graphBuildTab;
     }
 
-    //TODO: ЗДЕСЬ РАСПОЛАГАЕТСЯ ИНИЦИАЛИЗАЦИЯ ПАНЕЛИ АЛГОРИТМА. В НЕЙ НУЖНО РЕАЛИЗОВАТЬ ВЕСЬ АЛГОРИТМ ПОИСКА МОСТА.
     private StackPane algoPanelInit() {
         Label algSpeedLabel = new Label("Speed of visualisation");
         Slider algorithmSpeed = new Slider(1d, 10, 1);
@@ -227,8 +232,10 @@ public class Main extends Application {
 
         Button previous = new Button("Previous");
         previous.setDisable(true);
+        algoButtonPrev.set(previous);
 
         Button next = new Button("Next");
+        algoButtonNext.set(next);
 
         startRun.setOnAction(actionEvent -> {
             previous.setDisable(true);
@@ -316,6 +323,9 @@ public class Main extends Application {
             node.setColor(color);
         }
         node.turnOnHighlight();
+        if(actualStep.get() < reverseAlgoStack.size()-1 && bridges.get(actualStep.get()+1) != null) {
+            bridges.get(actualStep.get()+1).turnOffHighlight();
+        }
     }
 
     private void nextStep() {
@@ -331,10 +341,11 @@ public class Main extends Application {
             node.setColor(color);
         }
         node.turnOnHighlight();
-
+        if(bridges.get(actualStep.get()) != null) {
+            bridges.get(actualStep.get()).turnOnHighlight();
+        }
     }
 
-    //TODO: НАДО ПОЛУЧАТЬ НОДУ, БРАТЬ СОЕДИНЁННЫЕ С НЕЙ, ВЫЗВЫАТЬ МЕТОД НА НЕЁ
     private void stepInDepth(final Node curNode, final Node parent) {
         curNode.setLow(timer);
         curNode.setTin(timer);
@@ -342,6 +353,8 @@ public class Main extends Application {
         curNode.setHiddenColor(Color.GRAY);
         algoStack.add(new Pair<>(curNode, null));
         algoStack.add(new Pair<>(curNode, Color.GRAY));
+        bridges.add(null);
+        bridges.add(null);
 
         Vector<Node> nodes = graph.getAttaches(curNode);
         for(Node to : nodes) {
@@ -352,7 +365,7 @@ public class Main extends Application {
                 curNode.setLow(Integer.min(curNode.getLow(), to.getLow()));
 
                 if(to.getLow() > curNode.getTin()) {
-                    wrongInputAlert("Мост найден! Это "+curNode.getNumber()+" - "+to.getNumber());
+                    bridges.add(algoStack.size(), graph.findArch(curNode, to));
                 }
             }
             else {
@@ -360,10 +373,12 @@ public class Main extends Application {
             }
             if(!algoStack.getLast().getKey().equals(curNode)) {
                 algoStack.add(new Pair<>(curNode, null));
+                bridges.add(null);
             }
         }
         curNode.setHiddenColor(Color.BLACK);
         algoStack.add(new Pair<>(curNode, Color.BLACK));
+        bridges.add(null);
     }
 
     private ToolBar toolBarInit() {
@@ -457,13 +472,13 @@ public class Main extends Application {
     }
 
     private Node placeGraphNode(Coords coords, int number) {
-        if(!graph.isNear(coords, minNodesDist)) {
+        if(graph.isNear(coords, minNodesDist)) {
             loggerPush("WARNING\t\tToo near to another node! Operation canceled.");
             return null;
         }
 
         Circle circleTmp = new Circle(coords.getX(), coords.getY(), nodesRadius);
-        StackPane circleStack = new StackPane(circleTmp, new Text(Integer.toString(number)));
+        StackPane circleStack = new StackPane(circleTmp);
         circleStack.setShape(circleTmp);
         circleStack.setLayoutX(coords.getX()-nodesRadius);
         circleStack.setLayoutY(coords.getY()-nodesRadius);
@@ -577,10 +592,10 @@ public class Main extends Application {
             choosenFile = fc.showSaveDialog(mainStage);
         }
 
-        BufferedWriter writer;
+        ObjectOutputStream writer;
 
         try {
-            writer = new BufferedWriter(new FileWriter(choosenFile));
+            writer = new ObjectOutputStream(new FileOutputStream(choosenFile));
         } catch (NullPointerException e) {
             loggerPush("WARNING\t\tNot choose save path.");
             if(!asNew) {
@@ -591,23 +606,7 @@ public class Main extends Application {
         }
 
         loggerPush("SAVING\t\tSaving init");
-        writer.write("FILE_TYPE-GRAPH");
-        writer.newLine();
-        writer.write(String.valueOf(now));
-        writer.newLine();
-
-        for(Node node : graph.getKeys()) {
-            loggerPush("SAVING\t\t"+((double)(node.getNumber()+1)/graph.len())*100+"%");
-            writer.write(
-                    node.getNumber()+
-                            " attached["+
-                            graph.getStrValues(node)+
-                            "], cords["+
-                            node.getPos().toString()+
-                            "]"
-                    );
-            writer.newLine();
-        }
+        writer.writeObject(graph);
         writer.close();
         titleUpdate();
         loggerPush("SAVING\t\tSaved done");
@@ -619,6 +618,7 @@ public class Main extends Application {
         loggerPush("LOADING\t\tLoading...");
         Scanner sc;
 
+        //TODO: переписать под сериализацию
         if(!reload){
             FileChooser fc = new FileChooser();
             fc.setTitle("Selection graph file");

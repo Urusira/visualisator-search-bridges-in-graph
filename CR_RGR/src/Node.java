@@ -6,8 +6,9 @@ import java.util.Vector;
 
 public class Node extends GraphObject implements Comparable{
     private final Coords pos;
-    private final int number;
-    private StackPane container;
+    private int number;
+    private final StackPane container;
+    private final Text textNum;
     private final Vector<Arch> attachments = new Vector<>();
     private Color color;
     private int tin = -1;
@@ -22,6 +23,9 @@ public class Node extends GraphObject implements Comparable{
         figure.setStrokeWidth(2);
         figure.setFill(Color.WHITE);
         figure.setStroke(Color.BLACK);
+
+        textNum = new Text(Integer.toString(num));
+        circleContainer.getChildren().add(textNum);
 
         this.pos = pos;
         number = num;
@@ -38,17 +42,11 @@ public class Node extends GraphObject implements Comparable{
     public void setColor(Color color) {
         figure.setFill(color);
         if(color == Color.BLACK) {
-            Text txTemp = (Text) container.getChildren().getLast();
-            txTemp.setStroke(Color.WHITE);
+            textNum.setStroke(Color.WHITE);
         }
         if(color == Color.GRAY || color == Color.WHITE) {
-            Text txTemp = (Text) container.getChildren().getLast();
-            txTemp.setStroke(Color.BLACK);
+            textNum.setStroke(Color.BLACK);
         }
-    }
-
-    public Color getColor() {
-        return color;
     }
 
     public void addAttachment(Arch arch) {
@@ -63,6 +61,11 @@ public class Node extends GraphObject implements Comparable{
         return number;
     }
 
+    public void setNumber(int v) {
+        number = v;
+        textNum.setText(String.valueOf(v));
+    }
+
     public StackPane getContainer() {
         return container;
     }
@@ -70,15 +73,11 @@ public class Node extends GraphObject implements Comparable{
     @Override
     public int compareTo(Object o) {
         Node node = (Node) o;
-        return Integer.compare(this.number, node.number);
+        return Integer.compare(getNumber(), node.getNumber());
     }
 
     public void delAttach(Arch arch) {
         attachments.remove(arch);
-    }
-
-    public Text getText() {
-        return (Text) container.getChildren().getLast();
     }
 
     public void setLow(int low) {
