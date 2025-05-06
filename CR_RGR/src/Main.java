@@ -346,6 +346,7 @@ public class Main extends Application {
         }
     }
 
+    //TODO: добавить отображение структур данных. Короче говоря - отобразить метки времени у узлов
     private void stepInDepth(final Node curNode, final Node parent) {
         curNode.setLow(timer);
         curNode.setTin(timer);
@@ -471,6 +472,7 @@ public class Main extends Application {
         });
     }
 
+    //TODO: отображать метки времени у узлов
     private Node placeGraphNode(Coords coords, int number) {
         if(graph.isNear(coords, minNodesDist)) {
             loggerPush("WARNING\t\tToo near to another node! Operation canceled.");

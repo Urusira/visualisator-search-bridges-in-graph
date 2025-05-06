@@ -88,8 +88,12 @@ public class Graph {
             Node[] transitNodes = arch.getTransitNodes();
             deleteArch(transitNodes[0], transitNodes[1], arch, drawSpace);
         }
-        graph.tailMap(node, false).forEach((node1, nodes) -> node1.setNumber(node1.getNumber()-1));
         graph.remove(node);
+        graph.forEach((node1, nodes) -> {
+            if(node1.getNumber() > node.getNumber()) {
+                node1.setNumber(node1.getNumber()-1);
+            }
+        });
     }
 
     public Vector<Node> getNodes() {
