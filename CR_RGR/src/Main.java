@@ -10,6 +10,8 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -37,6 +39,7 @@ public class Main extends Application {
 
     private static Stage mainStage;
     private static Pane drawSpace;
+    private static VBox logger;
 
     private static Vector<Pair<Node, Color>> algoStack;
     private static Vector<Pair<Node, Color>> reverseAlgoStack;
@@ -123,8 +126,10 @@ public class Main extends Application {
             actualStep.set(-1);
             bridges.forEach(arch -> {if(arch!=null) arch.turnOffHighlight();});
             try{
-                algoStack.clear();
-                reverseAlgoStack.clear();
+                nodesStack.clear();
+                colorsStack.clear();
+                tinsStack.clear();
+                tlowsStack.clear();
                 bridges.clear();
             } catch (NullPointerException _){}
             algoButtonNext.get().setDisable(false);
@@ -147,10 +152,21 @@ public class Main extends Application {
             }
         });
 
+        logger = new VBox();
+        ScrollPane logPanel = new ScrollPane();
+        logPanel.setVmax(125);
+        logPanel.setVvalue(125);
+        logger.maxHeight(logPanel.getVmax());
+        logger.setPrefHeight(logPanel.getVmax());
+        logPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        logPanel.setContent(logger);
+        logPanel.vvalueProperty().bind(logger.heightProperty());
+
         BorderPane root = new BorderPane();
         root.setCenter(drawSpace);
         root.setRight(rightPanel);
         root.setTop(toolBar);
+        root.setBottom(logPanel);
         root.setId("root");
 
         return root;
@@ -359,6 +375,12 @@ public class Main extends Application {
         actualNode.setColor(nextColor != null ? nextColor : actualNode.getColor());
         if(afterStepNode == actualNode.getNumber() && afterStepColor == actualNode.getColor() &&
                 afterStepIn == actualNode.getTin() && afterStepLow == actualNode.getLow() && afterStepBridge == nextBridge) {
+            actualStep.getAndDecrement();
+            nodesStack.remove(actualStep.get()+1);
+            colorsStack.remove(actualStep.get()+1);
+            tinsStack.remove(actualStep.get()+1);
+            tlowsStack.remove(actualStep.get()+1);
+            bridges.remove(actualStep.get()+1);
             newNextStep();
             return;
         }
@@ -379,18 +401,18 @@ public class Main extends Application {
 
 //TODO заменить авте на бефо, опечатка
     private void newBackStep() {
-        int afterStepNode = -1;
-        Color afterStepColor = Color.AQUA;
-        int afterStepIn = -1;
-        int afterStepLow = -1;
-        Arch afterStepBridge = null;
-        if(actualStep.get() < bridges.size()){
-            afterStepNode = actualNode.getNumber();
-            afterStepColor = actualNode.getColor();
-            afterStepIn = actualNode.getTin();
-            afterStepLow = actualNode.getLow();
-            afterStepBridge = bridges.get(actualStep.get());
-        }
+//        int afterStepNode = -1;
+//        Color afterStepColor = Color.AQUA;
+//        int afterStepIn = -1;
+//        int afterStepLow = -1;
+//        Arch afterStepBridge = null;
+//        if(actualStep.get() < bridges.size()){
+//            afterStepNode = actualNode.getNumber();
+//            afterStepColor = actualNode.getColor();
+//            afterStepIn = actualNode.getTin();
+//            afterStepLow = actualNode.getLow();
+//            afterStepBridge = bridges.get(actualStep.get());
+//        }
         actualStep.getAndDecrement();
         if(actualStep.get() < 0) {
             actualStep.set(0);
@@ -436,11 +458,11 @@ public class Main extends Application {
         actualNode.setTin(nextTin != null ? (int)nextTin : actualNode.getTin());
         actualNode.setLow(nextLow != null ? (int)nextLow : actualNode.getLow());
         actualNode.setColor(nextColor != null ? nextColor : actualNode.getColor());
-        if(afterStepNode == actualNode.getNumber() && afterStepColor == actualNode.getColor() &&
-                afterStepIn == actualNode.getTin() && afterStepLow == actualNode.getLow() && afterStepBridge == nextBridge) {
-            newBackStep();
-            return;
-        }
+//        if(afterStepNode == actualNode.getNumber() && afterStepColor == actualNode.getColor() &&
+//                afterStepIn == actualNode.getTin() && afterStepLow == actualNode.getLow() && afterStepBridge == nextBridge) {
+//            newBackStep();
+//            return;
+//        }
         actualNode.updateText();
         loggerPush(
                 "[Back step] Step="+actualStep.get()+
@@ -883,5 +905,8 @@ public class Main extends Application {
     //TODO: ЗДЕСЬ БУДЕТ ВЫВОД ТЕКСТА В ПАНЕЛЬКУ ВНИЗУ ПРОГРАММЫ
     private void loggerPush(String text) {
         System.out.println(text);
+        Text log = new Text(text);
+        log.setTextAlignment(TextAlignment.LEFT);
+        logger.getChildren().add(log);
     }
 }
