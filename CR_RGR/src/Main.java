@@ -1,10 +1,12 @@
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -40,6 +42,7 @@ public class Main extends Application {
     private static Stage mainStage;
     private static Pane drawSpace;
     private static VBox logger;
+    private static VBox structs;
 
     private static Vector<Pair<Node, Color>> algoStack;
     private static Vector<Pair<Node, Color>> reverseAlgoStack;
@@ -157,16 +160,59 @@ public class Main extends Application {
         logPanel.setVmax(125);
         logPanel.setVvalue(125);
         logger.maxHeight(logPanel.getVmax());
+        logger.setMaxHeight(logPanel.getVmax());
         logger.setPrefHeight(logPanel.getVmax());
         logPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         logPanel.setContent(logger);
         logPanel.vvalueProperty().bind(logger.heightProperty());
+        Label logerTitle = new Label("Logs");
+        Button clearLogger = new Button("Clear logs");
+        clearLogger.setOnAction(_ -> {
+            logger.getChildren().clear();
+        });
+        HBox filler = new HBox();
+        HBox loggerHBox = new HBox(logerTitle, filler, clearLogger);
+        loggerHBox.setBackground(Background.fill(Color.LIGHTGRAY));
+        HBox.setHgrow(filler, Priority.ALWAYS);
+        loggerHBox.setPadding(new Insets(5, 10, 5, 10));
+        loggerHBox.setAlignment(Pos.BASELINE_CENTER);
+        logerTitle.setLabelFor(logPanel);
+        VBox loggerBox = new VBox(loggerHBox, logPanel);
+
+        structs = new VBox();
+        ScrollPane structsScrollPanel = new ScrollPane();
+        logPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        structsScrollPanel.setHmax(235);
+        structsScrollPanel.setHvalue(235);
+        structs.setPrefWidth(235);
+        structs.setMaxWidth(235);
+        structs.setAlignment(Pos.BASELINE_CENTER);
+        structsScrollPanel.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        structsScrollPanel.hvalueProperty().set(0);
+        structsScrollPanel.setContent(structs);
+        HBox nodesLabel = new HBox(new Label("Node"));
+        nodesLabel.setPrefWidth(35);
+        nodesLabel.setAlignment(Pos.BASELINE_CENTER);
+        HBox colorsLabel = new HBox(new Label("Color"));
+        colorsLabel.setPrefWidth(70);
+        colorsLabel.setAlignment(Pos.BASELINE_CENTER);
+        HBox tinsLabel = new HBox(new Label("Tin"));
+        tinsLabel.setPrefWidth(35);
+        tinsLabel.setAlignment(Pos.BASELINE_CENTER);
+        HBox lowsLabel = new HBox(new Label("Low"));
+        lowsLabel.setPrefWidth(35);
+        lowsLabel.setAlignment(Pos.BASELINE_CENTER);
+        HBox bridgeLabel = new HBox(new Label("Bridge"));
+        bridgeLabel.setPrefWidth(45);
+        bridgeLabel.setAlignment(Pos.BASELINE_CENTER);
+        structs.getChildren().add(new HBox(nodesLabel, colorsLabel, tinsLabel, lowsLabel, bridgeLabel));
 
         BorderPane root = new BorderPane();
         root.setCenter(drawSpace);
         root.setRight(rightPanel);
         root.setTop(toolBar);
-        root.setBottom(logPanel);
+        root.setBottom(loggerBox);
+        root.setLeft(structsScrollPanel);
         root.setId("root");
 
         return root;
@@ -315,6 +361,30 @@ public class Main extends Application {
                 stepInDepth(graph.getNodes().getFirst(), null);
                 graph.getNodes().getFirst().turnOnHighlight();
                 overlay.setVisible(false);
+                for (int i = 0; i < bridges.size(); i++) {
+                    HBox node = new HBox(new Label(nodesStack.get(i) != null ? nodesStack.get(i).toString() : ""));
+                    node.setPrefWidth(35);
+                    node.setStyle("-fx-border-width: 1pt; -fx-border-color: black");
+                    node.setAlignment(Pos.BASELINE_CENTER);
+                    HBox color = new HBox(new Label(colorsStack.get(i) != null ? colorsStack.get(i).toString() : ""));
+                    color.setPrefWidth(70);
+                    color.setAlignment(Pos.BASELINE_CENTER);
+                    color.setStyle("-fx-border-width: 1pt; -fx-border-color: black");
+                    HBox tin = new HBox(new Label(tinsStack.get(i) != null ? tinsStack.get(i).toString() : ""));
+                    tin.setPrefWidth(35);
+                    tin.setAlignment(Pos.BASELINE_CENTER);
+                    tin.setStyle("-fx-border-width: 1pt; -fx-border-color: black");
+                    HBox low = new HBox(new Label(tlowsStack.get(i) != null ? tlowsStack.get(i).toString() : ""));
+                    low.setPrefWidth(35);
+                    low.setAlignment(Pos.BASELINE_CENTER);
+                    low.setStyle("-fx-border-width: 1pt; -fx-border-color: black");
+                    HBox bridge = new HBox(new Label(bridges.get(i) != null ? bridges.get(i).toString() : ""));
+                    bridge.setPrefWidth(40);
+                    bridge.setAlignment(Pos.BASELINE_CENTER);
+                    bridge.setStyle("-fx-border-width: 1pt; -fx-border-color: black");
+                    HBox temp = new HBox(node, color, tin, low, bridge);
+                    structs.getChildren().add(temp);
+                }
             } catch (NoSuchElementException e) {
                 wrongInputAlert("At first create/load/generate graph!");
             }
@@ -354,6 +424,8 @@ public class Main extends Application {
             actualStep.set(bridges.size());
             return;
         }
+        HBox structsRow = (HBox)structs.getChildren().get(actualStep.get()+1);
+        structsRow.setBackground(Background.fill(Color.LIGHTSTEELBLUE));
         Node nextNode = nodesStack.get(actualStep.get());
         Object nextTin = tinsStack.get(actualStep.get());
         Object nextLow = tlowsStack.get(actualStep.get());
@@ -381,6 +453,7 @@ public class Main extends Application {
             tinsStack.remove(actualStep.get()+1);
             tlowsStack.remove(actualStep.get()+1);
             bridges.remove(actualStep.get()+1);
+            structs.getChildren().remove(actualStep.get()+1);
             newNextStep();
             return;
         }
@@ -401,6 +474,8 @@ public class Main extends Application {
 
 //TODO заменить авте на бефо, опечатка
     private void newBackStep() {
+        HBox structsRow = (HBox)structs.getChildren().get(actualStep.get()+1);
+        structsRow.setBackground(Background.fill(Color.WHITE));
 //        int afterStepNode = -1;
 //        Color afterStepColor = Color.AQUA;
 //        int afterStepIn = -1;
@@ -603,8 +678,21 @@ public class Main extends Application {
 
         optionsMenu.getItems().addAll(minDistNodes, nodesRadius);
 
+        Button downscale = new Button("-");
+        downscale.setPrefWidth(50);
+        downscale.setOnAction(_ -> {
+            drawSpace.setScaleX(drawSpace.getScaleX()-0.1);
+            drawSpace.setScaleY(drawSpace.getScaleY()-0.1);
+        });
+        Button upscale = new Button("+");
+        upscale.setPrefWidth(50);
+        upscale.setOnAction(_ -> {
+            drawSpace.setScaleX(drawSpace.getScaleX()+0.1);
+            drawSpace.setScaleY(drawSpace.getScaleY()+0.1);
+        });
 
         menuBar.getMenus().addAll(fileMenu, optionsMenu);
+        toolBar.getItems().addAll(new Label("Change drawing panel scale: "), downscale, upscale);
         return toolBar;
     }
 
