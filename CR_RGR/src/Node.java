@@ -1,6 +1,7 @@
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 
 import java.util.Vector;
 
@@ -8,7 +9,7 @@ public class Node extends GraphObject implements Comparable{
     private final Coords pos;
     private int number;
     private final StackPane container;
-    private final Text textNum;
+    private final Text text;
     private final Vector<Arch> attachments = new Vector<>();
     private Color color;
     private int tin = -1;
@@ -24,8 +25,11 @@ public class Node extends GraphObject implements Comparable{
         figure.setFill(Color.WHITE);
         figure.setStroke(Color.BLACK);
 
-        textNum = new Text(Integer.toString(num));
-        circleContainer.getChildren().add(textNum);
+        text = new Text(num+"\ntin= \nlow= ");
+        text.setTextAlignment(TextAlignment.CENTER);
+        circleContainer.getChildren().add(text);
+
+
 
         this.pos = pos;
         number = num;
@@ -35,17 +39,19 @@ public class Node extends GraphObject implements Comparable{
         this.color = Color.WHITE;
     }
 
-    public void setHiddenColor(Color color) {
-        this.color = color;
-    }
+//    public void setHiddenColor(Color color) {
+//        this.color = color;
+//    }
 
     public void setColor(Color color) {
+        if(color == this.color) return;
         figure.setFill(color);
+        this.color = color;
         if(color == Color.BLACK) {
-            textNum.setStroke(Color.WHITE);
+            text.setFill(Color.WHITE);
         }
         if(color == Color.GRAY || color == Color.WHITE) {
-            textNum.setStroke(Color.BLACK);
+            text.setFill(Color.BLACK);
         }
     }
 
@@ -63,7 +69,7 @@ public class Node extends GraphObject implements Comparable{
 
     public void setNumber(int v) {
         number = v;
-        textNum.setText(String.valueOf(v));
+        updateText();
     }
 
     public StackPane getContainer() {
@@ -94,5 +100,21 @@ public class Node extends GraphObject implements Comparable{
 
     public int getTin() {
         return tin;
+    }
+
+    public Color getColor() {
+        return color;
+    }
+
+    public void updateText() {
+        if(tin == -1 || low == -1)
+            text.setText(number + "\ntin= \nlow= ");
+        else
+            text.setText(number +"\ntin="+ tin +"\nlow="+ low);
+    }
+
+    @Override
+    public String toString() {
+        return String.valueOf(number);
     }
 }

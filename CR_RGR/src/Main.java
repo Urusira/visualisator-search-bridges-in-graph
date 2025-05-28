@@ -30,7 +30,7 @@ public class Main extends Application {
     static manualModes manualDraw_Mode = manualModes.NONE;
     static Node selectedNodes = null;
 
-    private static double nodesRadius = 30;
+    private static double nodesRadius = 32;
     private static double minNodesDist = nodesRadius*3;
 
     private File choosenFile = null;
@@ -40,13 +40,20 @@ public class Main extends Application {
 
     private static Vector<Pair<Node, Color>> algoStack;
     private static Vector<Pair<Node, Color>> reverseAlgoStack;
+
+    private static Vector<Node> nodesStack = new Vector<>();
+    private static Vector<Color> colorsStack = new Vector<>();
+    private static Vector<Integer> tinsStack = new Vector<>();
+    private static Vector<Integer> tlowsStack = new Vector<>();
+
     private static final Vector<Arch> bridges = new Vector<>();
 
     private static AnchorPane algoPanelBlocker;
     private final AtomicReference<Button> algoButtonNext = new AtomicReference<>();
     private final AtomicReference<Button> algoButtonPrev = new AtomicReference<>();
 
-    private final AtomicInteger actualStep = new AtomicInteger(0);
+    private final AtomicInteger actualStep = new AtomicInteger(-1);
+    private Node actualNode;
 
     private int timer = 0;
 
@@ -109,10 +116,11 @@ public class Main extends Application {
             graph.getNodes().forEach(node -> {
                 node.setTin(-1);
                 node.setLow(-1);
+                node.updateText();
                 node.setColor(Color.WHITE);
                 node.turnOffHighlight();
             });
-            actualStep.set(0);
+            actualStep.set(-1);
             bridges.forEach(arch -> {if(arch!=null) arch.turnOffHighlight();});
             try{
                 algoStack.clear();
@@ -242,11 +250,11 @@ public class Main extends Application {
             next.setDisable(true);
             Timeline timeline = new Timeline();
 
-            for(int i = 0; i < algoStack.size()-1; i++) {
+            for(int i = 0; i < bridges.size()-1; i++) {
                 final int index = i;
                 KeyFrame keyFrame1 = new KeyFrame(Duration.millis(
                         index*(1000/algorithmSpeed.getValue())+(1000/algorithmSpeed.getValue())), actionEvent2 -> {
-                                nextStep();
+                                newNextStep();
 
                         });
                 timeline.getKeyFrames().add(keyFrame1);
@@ -259,17 +267,16 @@ public class Main extends Application {
 
         previous.setOnAction(actionEvent -> {
             next.setDisable(false);
-            backStep();
+            newBackStep();
             if(actualStep.get() <= 0) {
                 previous.setDisable(true);
-                actualStep.set(0);
             }
         });
 
         next.setOnAction(actionEvent -> {
             previous.setDisable(false);
-            nextStep();
-            if(actualStep.get() >= algoStack.size()-1) {
+            newNextStep();
+            if(actualStep.get() >= bridges.size()-1) {
                 next.setDisable(true);
             }
         });
@@ -285,8 +292,12 @@ public class Main extends Application {
         startButton.setOnAction(actionEvent -> {
             try {
                 algoStack = new Vector<>();
+                nodesStack = new Vector<>();
+                colorsStack = new Vector<>();
+                tinsStack = new Vector<>();
+                tlowsStack = new Vector<>();
+
                 stepInDepth(graph.getNodes().getFirst(), null);
-                reverseAlgoStack = revResortStack(algoStack);
                 graph.getNodes().getFirst().turnOnHighlight();
                 overlay.setVisible(false);
             } catch (NoSuchElementException e) {
@@ -310,50 +321,151 @@ public class Main extends Application {
         return new StackPane(algoContolPanel, overlay);
     }
 
-    private void backStep() {
-        if(actualStep.get() >= algoStack.size()-1) {
-            actualStep.set(algoStack.size()-1);
+    private void newNextStep() {
+        int afterStepNode = -1;
+        Color afterStepColor = Color.AQUA;
+        int afterStepIn = -1;
+        int afterStepLow = -1;
+        Arch afterStepBridge = null;
+        if(actualStep.get() != -1){
+            afterStepNode = actualNode.getNumber();
+            afterStepColor = actualNode.getColor();
+            afterStepIn = actualNode.getTin();
+            afterStepLow = actualNode.getLow();
+            afterStepBridge = bridges.get(actualStep.get());
         }
-        Node node = reverseAlgoStack.get(actualStep.get()).getKey();
-        node.turnOffHighlight();
-        actualStep.getAndDecrement();
-        node = reverseAlgoStack.get(actualStep.get()).getKey();
-        Color color = reverseAlgoStack.get(actualStep.get()).getValue();
-        if (color != null){
-            node.setColor(color);
+        actualStep.getAndIncrement();
+        if(actualStep.get() >= bridges.size()) {
+            actualStep.set(bridges.size()-1);
+            return;
         }
-        node.turnOnHighlight();
-        if(actualStep.get() < reverseAlgoStack.size()-1 && bridges.get(actualStep.get()+1) != null) {
-            bridges.get(actualStep.get()+1).turnOffHighlight();
+        Node nextNode = nodesStack.get(actualStep.get());
+        Object nextTin = tinsStack.get(actualStep.get());
+        Object nextLow = tlowsStack.get(actualStep.get());
+        Color nextColor = colorsStack.get(actualStep.get());
+        Arch nextBridge = bridges.get(actualStep.get());
+
+        if(nextNode != null) {
+            if(nextNode != actualNode) {
+                try{
+                    actualNode.turnOffHighlight();
+                } catch (NullPointerException _){}
+                nextNode.turnOnHighlight();
+                actualNode = nextNode;
+            }
+        }
+
+        actualNode.setTin(nextTin != null ? (int)nextTin : actualNode.getTin());
+        actualNode.setLow(nextLow != null ? (int)nextLow : actualNode.getLow());
+        actualNode.setColor(nextColor != null ? nextColor : actualNode.getColor());
+        if(afterStepNode == actualNode.getNumber() && afterStepColor == actualNode.getColor() &&
+                afterStepIn == actualNode.getTin() && afterStepLow == actualNode.getLow() && afterStepBridge == nextBridge) {
+            newNextStep();
+            return;
+        }
+        actualNode.updateText();
+        loggerPush(
+                "[Next step] Step="+actualStep.get()+
+                        ", node="+actualNode.getNumber()+" ("+nodesStack.get(actualStep.get())+")"+
+                        ", color="+actualNode.getColor()+" ("+colorsStack.get(actualStep.get())+")"+
+                        ", tin="+actualNode.getTin()+" ("+tinsStack.get(actualStep.get())+")"+
+                        ", low="+actualNode.getLow()+" ("+tlowsStack.get(actualStep.get())+")"
+        );
+        if (nextBridge != null) {
+            nextBridge.turnOnHighlight();
+            loggerPush("Bridge founded! Its - edge between "+nextBridge.getTransitNodes()[0].getNumber()+
+                    " and "+nextBridge.getTransitNodes()[1].getNumber());
         }
     }
 
-    private void nextStep() {
-        if(actualStep.get() >= algoStack.size()-1) {
-            actualStep.set(algoStack.size()-1);
+//TODO заменить авте на бефо, опечатка
+    private void newBackStep() {
+        int afterStepNode = -1;
+        Color afterStepColor = Color.AQUA;
+        int afterStepIn = -1;
+        int afterStepLow = -1;
+        Arch afterStepBridge = null;
+        if(actualStep.get() != bridges.size()-1){
+            afterStepNode = actualNode.getNumber();
+            afterStepColor = actualNode.getColor();
+            afterStepIn = actualNode.getTin();
+            afterStepLow = actualNode.getLow();
+            afterStepBridge = bridges.get(actualStep.get());
         }
-        Node node = algoStack.get(actualStep.get()).getKey();
-        node.turnOffHighlight();
-        actualStep.getAndIncrement();
-        node = algoStack.get(actualStep.get()).getKey();
-        Color color = algoStack.get(actualStep.get()).getValue();
-        if(color != null){
-            node.setColor(color);
+        actualStep.getAndDecrement();
+        if(actualStep.get() < 0) {
+            actualStep.set(0);
+            actualNode.turnOffHighlight();
+            return;
         }
-        node.turnOnHighlight();
-        if(bridges.get(actualStep.get()) != null) {
-            bridges.get(actualStep.get()).turnOnHighlight();
+        Node nextNode = nodesStack.get(actualStep.get());
+        //Где-то тут кроется проблема с получением узла, к которому применяются изменения. Это вызывает неправильные tin/tlow
+        if(nextNode==null && actualStep.get() > 0){
+            int nearbyNodeIndex = actualStep.get()-1;
+            nextNode = nodesStack.get(nearbyNodeIndex);
+            while (nextNode == null) {
+                nearbyNodeIndex--;
+                if(nearbyNodeIndex <= 0) break;
+                nextNode = nodesStack.get(nearbyNodeIndex);
+            }
+        }
+        Object nextTin = tinsStack.get(actualStep.get());
+        Object nextLow = tlowsStack.get(actualStep.get());
+        Color nextColor = colorsStack.get(actualStep.get());
+        if(nextColor == Color.BLACK) nextColor = Color.GRAY;
+        else if(nextColor == Color.GRAY) nextColor = Color.WHITE;
+        Arch nextBridge = bridges.get(actualStep.get());
+
+        if(nextNode != null) {
+            if(nextNode != actualNode) {
+                try{
+                    actualNode.turnOffHighlight();
+                } catch (NullPointerException _){}
+                nextNode.turnOnHighlight();
+                actualNode = nextNode;
+            }
+        }
+        actualNode.setTin(nextTin != null ? (int)nextTin : actualNode.getTin());
+        actualNode.setLow(nextLow != null ? (int)nextLow : actualNode.getLow());
+        actualNode.setColor(nextColor != null ? nextColor : actualNode.getColor());
+        if(afterStepNode == actualNode.getNumber() && afterStepColor == actualNode.getColor() &&
+                afterStepIn == actualNode.getTin() && afterStepLow == actualNode.getLow() && afterStepBridge == nextBridge) {
+            newBackStep();
+            return;
+        }
+        actualNode.updateText();
+        loggerPush(
+                "[Back step] Step="+actualStep.get()+
+                        ", node="+actualNode.getNumber()+" ("+nodesStack.get(actualStep.get())+")"+
+                        ", color="+actualNode.getColor()+
+                        ", tin="+actualNode.getTin()+
+                        ", low="+actualNode.getLow()
+        );
+        if (nextBridge != null) {
+            nextBridge.turnOffHighlight();
+            loggerPush("Bridge losted... It was edge between "+nextBridge.getTransitNodes()[0].getNumber()+
+                    " and "+nextBridge.getTransitNodes()[1].getNumber()+'.');
         }
     }
 
     //TODO: добавить отображение структур данных. Короче говоря - отобразить метки времени у узлов
     private void stepInDepth(final Node curNode, final Node parent) {
+        nodesStack.add(curNode);
+        nodesStack.add(null);
+
+        colorsStack.add(null);
+        colorsStack.add(Color.GRAY);
+
         curNode.setLow(timer);
+        tlowsStack.add(-1);
+        tlowsStack.add(timer);
+
         curNode.setTin(timer);
+        tinsStack.add(-1);
+        tinsStack.add(timer);
+
         timer++;
-        curNode.setHiddenColor(Color.GRAY);
-        algoStack.add(new Pair<>(curNode, null));
-        algoStack.add(new Pair<>(curNode, Color.GRAY));
+
         bridges.add(null);
         bridges.add(null);
 
@@ -363,22 +475,54 @@ public class Main extends Application {
             if(to.getTin() == -1) {
                 stepInDepth(to, curNode);
 
-                curNode.setLow(Integer.min(curNode.getLow(), to.getLow()));
+                int minlow = Integer.min(curNode.getLow(), to.getLow());
+                tlowsStack.add(minlow);
+                tinsStack.add(null);
+                colorsStack.add(null);
+                nodesStack.add(null);
+                bridges.add(null);
+                curNode.setLow(minlow);
 
                 if(to.getLow() > curNode.getTin()) {
-                    bridges.add(algoStack.size(), graph.findArch(curNode, to));
+                    bridges.add(graph.findArch(curNode, to));
+                    tlowsStack.add(null);
+                    tinsStack.add(null);
+                    colorsStack.add(null);
+                    nodesStack.add(null);
                 }
             }
             else {
-                curNode.setLow(Integer.min(curNode.getLow(), to.getTin()));
+                int minlow = Integer.min(curNode.getLow(), to.getTin());
+                curNode.setLow(minlow);
+                tlowsStack.add(minlow);
+                tinsStack.add(null);
+                colorsStack.add(null);
+                nodesStack.add(null);
+                bridges.add(null);
             }
-            if(!algoStack.getLast().getKey().equals(curNode)) {
-                algoStack.add(new Pair<>(curNode, null));
+            int lastNodeId = nodesStack.size()-1;
+            Node lastNode = nodesStack.get(lastNodeId);
+            while(lastNode == null) {
+                lastNodeId--;
+                lastNode = nodesStack.get(lastNodeId);
+            }
+            if(!lastNode.equals(curNode)) {
+                tlowsStack.add(null);
+                tinsStack.add(null);
+                colorsStack.add(null);
+                nodesStack.add(curNode);
                 bridges.add(null);
             }
         }
-        curNode.setHiddenColor(Color.BLACK);
-        algoStack.add(new Pair<>(curNode, Color.BLACK));
+        tlowsStack.add(null);
+        tlowsStack.add(null);
+        tinsStack.add(null);
+        tinsStack.add(null);
+        colorsStack.add(null);
+        colorsStack.add(Color.BLACK);
+        nodesStack.add(curNode);
+        nodesStack.add(null);
+        bridges.add(null);
         bridges.add(null);
     }
 
@@ -472,7 +616,6 @@ public class Main extends Application {
         });
     }
 
-    //TODO: отображать метки времени у узлов
     private Node placeGraphNode(Coords coords, int number) {
         if(graph.isNear(coords, minNodesDist)) {
             loggerPush("WARNING\t\tToo near to another node! Operation canceled.");
@@ -480,6 +623,24 @@ public class Main extends Application {
         }
 
         Circle circleTmp = new Circle(coords.getX(), coords.getY(), nodesRadius);
+
+
+//        AtomicBoolean collision = new AtomicBoolean(false);
+//        //TODO: WIP
+//        graph.getNodes().forEach(node -> {
+//            if(circleTmp.intersects(node.getFigure().getBoundsInParent())) {
+//                collision.set(true);
+//            }
+//            node.getAttachments().forEach(arch -> {
+//                if(circleTmp.intersects(arch.getFigure().getBoundsInParent())) {
+//                    collision.set(true);
+//                }
+//            });
+//        });
+//        if (collision.get()) {return null;}
+
+
+
         StackPane circleStack = new StackPane(circleTmp);
         circleStack.setShape(circleTmp);
         circleStack.setLayoutX(coords.getX()-nodesRadius);
@@ -503,7 +664,6 @@ public class Main extends Application {
                     break;
                 }
                 case manualModes.DELETE: {
-                    //TODO: ПРИ УДАЛЕНИИ НАДО ОБНОВИТЬ НУМЕРАЦИЮ ВСЕХ ВЕРШИН ДЛЯ ИЗБЕЖАНИЯ ДЫР
                     graph.deleteNode(node, drawSpace);
                     break;
                 }
@@ -560,7 +720,6 @@ public class Main extends Application {
         Random random = new Random();
         for (int countNode = 0; countNode < nodesAmount; countNode++) {
             Node nodeTmp = null;
-            // TODO: МОЖНО УПРОСТИТЬ, ВМЕСТО ПОПЫТКИ УСТАНОВКИ НОДЫ ВЫПОЛНИТЬ ПРОВЕРКУ ДОСТУПНОСТИ КООРДИНАТ
             while(nodeTmp == null) {
                 double randomX = random.nextDouble(drawSpace.getWidth());
                 double randomY = random.nextDouble(drawSpace.getHeight());
@@ -715,41 +874,6 @@ public class Main extends Application {
     
     //TODO: ЗДЕСЬ БУДЕТ ВЫВОД ТЕКСТА В ПАНЕЛЬКУ ВНИЗУ ПРОГРАММЫ
     private void loggerPush(String text) {
-        //System.out.println(text);
-    }
-
-    private Vector<Pair<Node, Color>> revResortStack(Vector<Pair<Node, Color>> stack) {
-        Vector<Pair<Node, Color>> result = new Vector<>(stack);
-        result.replaceAll(para -> {
-            try {
-                if (para.getValue().equals(Color.GRAY)) {
-                    return new Pair<>(para.getKey(), Color.WHITE);
-                }
-                if (para.getValue().equals(Color.BLACK)) {
-                    return new Pair<>(para.getKey(), Color.GRAY);
-                }
-            } catch (NullPointerException _) {}
-            return para;
-        });
-
-        List<Pair<Node, Color>> toSkip = new ArrayList<>();
-
-        for(int i = result.size()-1; i > 0; i--) {
-            var temp = result.get(i);
-            if(temp.getValue() != null && !toSkip.contains(temp)) {
-                int index = i;
-                while(result.get(index).getValue()==null || result.get(index).getKey() == result.get(i).getKey()){
-                    index--;
-                    if(index < 0 || (result.get(index).getKey()!=result.get(i).getKey() && result.get(index).getValue()==null)) {break;}
-                }
-                index++;
-                result.remove(i);
-                result.add(index, temp);
-                toSkip.add(temp);
-                i++;
-            }
-        }
-
-        return result;
+        System.out.println(text);
     }
 }

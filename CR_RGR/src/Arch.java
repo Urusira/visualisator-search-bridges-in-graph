@@ -39,4 +39,9 @@ public class Arch extends GraphObject {
                 Objects.equals(linkedNodes[1], another.getTransitNodes()[0])
         );
     }
+
+    @Override
+    public String toString() {
+        return linkedNodes[0]+":"+linkedNodes[1];
+    }
 }
