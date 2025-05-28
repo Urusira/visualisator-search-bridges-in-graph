@@ -251,9 +251,8 @@ public class Main extends Application {
             Timeline timeline = new Timeline();
 
             for(int i = 0; i < bridges.size()-1; i++) {
-                final int index = i;
                 KeyFrame keyFrame1 = new KeyFrame(Duration.millis(
-                        index*(1000/algorithmSpeed.getValue())+(1000/algorithmSpeed.getValue())), actionEvent2 -> {
+                        i*(1000/algorithmSpeed.getValue())+(1000/algorithmSpeed.getValue())), actionEvent2 -> {
                                 newNextStep();
 
                         });
@@ -336,7 +335,7 @@ public class Main extends Application {
         }
         actualStep.getAndIncrement();
         if(actualStep.get() >= bridges.size()) {
-            actualStep.set(bridges.size()-1);
+            actualStep.set(bridges.size());
             return;
         }
         Node nextNode = nodesStack.get(actualStep.get());
@@ -385,7 +384,7 @@ public class Main extends Application {
         int afterStepIn = -1;
         int afterStepLow = -1;
         Arch afterStepBridge = null;
-        if(actualStep.get() != bridges.size()-1){
+        if(actualStep.get() < bridges.size()){
             afterStepNode = actualNode.getNumber();
             afterStepColor = actualNode.getColor();
             afterStepIn = actualNode.getTin();
@@ -399,7 +398,7 @@ public class Main extends Application {
             return;
         }
         Node nextNode = nodesStack.get(actualStep.get());
-        //Где-то тут кроется проблема с получением узла, к которому применяются изменения. Это вызывает неправильные tin/tlow
+
         if(nextNode==null && actualStep.get() > 0){
             int nearbyNodeIndex = actualStep.get()-1;
             nextNode = nodesStack.get(nearbyNodeIndex);
@@ -411,7 +410,16 @@ public class Main extends Application {
         }
         Object nextTin = tinsStack.get(actualStep.get());
         Object nextLow = tlowsStack.get(actualStep.get());
-        Color nextColor = colorsStack.get(actualStep.get());
+        int nearbyColorIndex = actualStep.get();
+        Color nextColor = colorsStack.get(nearbyColorIndex);
+        while (nextColor == null) {
+            nearbyColorIndex--;
+            if(nearbyColorIndex <= 0) {
+                nextColor = Color.WHITE;
+                break;
+            }
+            nextColor = colorsStack.get(nearbyColorIndex);
+        }
         if(nextColor == Color.BLACK) nextColor = Color.GRAY;
         else if(nextColor == Color.GRAY) nextColor = Color.WHITE;
         Arch nextBridge = bridges.get(actualStep.get());
@@ -437,9 +445,9 @@ public class Main extends Application {
         loggerPush(
                 "[Back step] Step="+actualStep.get()+
                         ", node="+actualNode.getNumber()+" ("+nodesStack.get(actualStep.get())+")"+
-                        ", color="+actualNode.getColor()+
-                        ", tin="+actualNode.getTin()+
-                        ", low="+actualNode.getLow()
+                        ", color="+actualNode.getColor()+" ("+colorsStack.get(actualStep.get())+")"+
+                        ", tin="+actualNode.getTin()+" ("+tinsStack.get(actualStep.get())+")"+
+                        ", low="+actualNode.getLow()+" ("+tlowsStack.get(actualStep.get())+")"
         );
         if (nextBridge != null) {
             nextBridge.turnOffHighlight();
