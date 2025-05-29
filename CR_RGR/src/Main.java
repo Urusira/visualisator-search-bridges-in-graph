@@ -6,7 +6,6 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -18,10 +17,12 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.util.Pair;
+import kotlin.jvm.Synchronized;
 
 import java.io.*;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -36,6 +37,9 @@ public class Main extends Application {
 
     private static double nodesRadius = 32;
     private static double minNodesDist = nodesRadius*3;
+    private static double minNodeToArch = nodesRadius+2;
+
+    private static final AtomicInteger retryCounter = new AtomicInteger(0);
 
     private File choosenFile = null;
 
@@ -258,6 +262,8 @@ public class Main extends Application {
         randomGraph.setOnAction(actionEvent -> {
             int nodAmoInt;
             int archAmoInt;
+
+            retryCounter.set(0);
 
             try {
                 nodAmoInt = Integer.parseInt(nodesAmount.getText());
@@ -519,15 +525,15 @@ public class Main extends Application {
         int nearbyColorIndex = actualStep.get();
         Color nextColor = colorsStack.get(nearbyColorIndex);
         if(nextColor == null){
-//            nextColor = getPrevParam(colorsStack, actualStep.get(), nextNode != null ? nextNode : actualNode);
-            while (nextColor == null) {
-                nearbyColorIndex--;
-                if (nearbyColorIndex <= 0) {
-                    nextColor = Color.WHITE;
-                    break;
-                }
-                nextColor = colorsStack.get(nearbyColorIndex);
-            }
+            nextColor = getPrevParam(colorsStack, actualStep.get(), nextNode != null ? nextNode : actualNode);
+//            while (nextColor == null) {
+//                nearbyColorIndex--;
+//                if (nearbyColorIndex <= 0) {
+//                    nextColor = Color.WHITE;
+//                    break;
+//                }
+//                nextColor = colorsStack.get(nearbyColorIndex);
+//            }
         }
         if(nextColor == Color.BLACK) nextColor = Color.GRAY;
         else if(nextColor == Color.GRAY) nextColor = Color.WHITE;
@@ -566,32 +572,34 @@ public class Main extends Application {
     }
 
     private <T> T getPrevParam(Vector<T> stack, int startStep, Node targetNode) {
-        loggerPush("[FINDprevious]\tMethod was called.");
+        loggerPush("[FINDprevious]\t\tMethod was called.");
         int tempStep = startStep;
-        loggerPush("[FINDprevious]\tInit target node & tempStep. Поиск последнего появления узла");
+        loggerPush("[FINDprevious]\t\tInit target node & tempStep. Try found last entry this node");
         while(nodesStack.get(tempStep) != targetNode) {
-            loggerPush("[FINDprevious]\tИду назад.");
+            loggerPush("[FINDprevious]\t\tGo to back.");
             tempStep--;
             if(tempStep <= 0) {
-                loggerPush("[FINDprevious]\tЯ на нуле, выхожу.");
+                loggerPush("[FINDprevious]\t\tEnd stack. Return.");
                 break;
             }
         }
-        loggerPush("[FINDprevious]\tИщу параметр для этого узла.");
+        loggerPush("[FINDprevious]\tTry found parameter for this node.");
+        T parameter = null;
         while(stack.get(tempStep) == null) {
-            loggerPush("[FINDprevious]\tИду вперёд.");
+            loggerPush("[FINDprevious]\t\tGo forward.");
             tempStep++;
+            parameter = stack.get(tempStep) != null ? stack.get(tempStep) : parameter;
             if(tempStep >= nodesStack.size()) {
-                loggerPush("[FINDprevious]\tДальше ничего нет...");
+                loggerPush("[FINDprevious]\t\tEnd stack.");
                 tempStep = nodesStack.size()-1;
                 break;
             }
-            if(nodesStack.get(tempStep) != null && nodesStack.get(tempStep) != actualNode) {
-                loggerPush("[FINDprevious]\tНашёл другой узел, идём к следующему появлению узла.");
+            if(nodesStack.get(tempStep) != null && nodesStack.get(tempStep) != actualNode && parameter == null) {
+                loggerPush("[FINDprevious]\t\tFinded another node, go deeper.");
                 return getPrevParam(stack, tempStep, targetNode);
             }
         }
-        loggerPush("[FINDprevious]\tНАШЁЛ.");
+        loggerPush("[FINDprevious]\t\tGot it.");
         return stack.get(tempStep);
     }
 
@@ -715,19 +723,22 @@ public class Main extends Application {
         MenuItem minDistNodes = new MenuItem("Min. distance");
         minDistNodes.setOnAction(actionEvent -> insertMinDist());
 
+        MenuItem minAngleNodes = new MenuItem("Min. angle btw nodes");
+        minAngleNodes.setOnAction(actionEvent -> insertminAngleBTWNodes());
+
         MenuItem nodesRadius = new MenuItem("Nodes radius");
         nodesRadius.setOnAction(actionEvent -> insertRadiusNodes());
 
-        optionsMenu.getItems().addAll(minDistNodes, nodesRadius);
+        optionsMenu.getItems().addAll(minDistNodes, minAngleNodes, nodesRadius);
 
         Button downscale = new Button("-");
-        downscale.setPrefWidth(50);
+        downscale.setPrefWidth(25);
         downscale.setOnAction(_ -> {
             drawSpace.setScaleX(drawSpace.getScaleX()-0.1);
             drawSpace.setScaleY(drawSpace.getScaleY()-0.1);
         });
         Button upscale = new Button("+");
-        upscale.setPrefWidth(50);
+        upscale.setPrefWidth(25);
         upscale.setOnAction(_ -> {
             drawSpace.setScaleX(drawSpace.getScaleX()+0.1);
             drawSpace.setScaleY(drawSpace.getScaleY()+0.1);
@@ -776,30 +787,43 @@ public class Main extends Application {
         });
     }
 
+    private void insertminAngleBTWNodes() {
+        TextInputDialog dialog = new TextInputDialog(String.valueOf(minNodeToArch));
+        dialog.setTitle("Insert minimal angle");
+        dialog.setHeaderText("Please, insert new minimal angle between nodes.");
+        dialog.setContentText("Minimal angle:");
+        dialog.showAndWait().ifPresent(newValue -> {
+            double val = Double.parseDouble(newValue);
+            if(val >= 0 || val <= 360) {
+                minNodeToArch = val;
+            } else {
+                wrongInputAlert("Input value must be only greater or equals than 0 and lower or equals 360!");
+            }
+        });
+    }
+
     private Node placeGraphNode(Coords coords, int number) {
-        if(graph.isNear(coords, minNodesDist)) {
-            loggerPush("WARNING\t\tToo near to another node! Operation canceled.");
+        if(coords.getX() <= nodesRadius || coords.getX() >= drawSpace.getWidth()-nodesRadius || coords.getY() <= nodesRadius || coords.getY() >= drawSpace.getHeight()-nodesRadius) {
+            loggerPush("ERROR\t\tToo near to border drawing panel.");
             return null;
         }
 
         Circle circleTmp = new Circle(coords.getX(), coords.getY(), nodesRadius);
 
-
-//        AtomicBoolean collision = new AtomicBoolean(false);
-//        //TODO: WIP
-//        graph.getNodes().forEach(node -> {
-//            if(circleTmp.intersects(node.getFigure().getBoundsInParent())) {
-//                collision.set(true);
-//            }
-//            node.getAttachments().forEach(arch -> {
-//                if(circleTmp.intersects(arch.getFigure().getBoundsInParent())) {
-//                    collision.set(true);
-//                }
-//            });
-//        });
-//        if (collision.get()) {return null;}
-
-
+        AtomicBoolean collision = new AtomicBoolean(false);
+        graph.getNodes().forEach(node -> {
+            if(Coords.minus(node.getPos(), coords) < minNodesDist) {
+                collision.set(true);
+            }
+            graph.getAttaches(node).forEach(attaNodes -> {
+                double distFromCoordsToArch = getDist(node.getPos(), attaNodes.getPos(), coords);
+                if(distFromCoordsToArch < minNodeToArch) collision.set(true);
+            });
+        });
+        if (collision.get()) {
+            loggerPush("ERROR\t\tCannot place node at here. Too close to another arch or node.");
+            return null;
+        }
 
         StackPane circleStack = new StackPane(circleTmp);
         circleStack.setShape(circleTmp);
@@ -832,12 +856,44 @@ public class Main extends Application {
         return node;
     }
 
+
+    private double getDist(Coords linePtA, Coords linePtB, Coords point){
+        double px = point.getX(), py = point.getY();
+        double ax = linePtA.getX(), ay = linePtA.getY();
+        double bx = linePtB.getX(), by = linePtB.getY();
+
+        double dx = bx - ax;
+        double dy = by - ay;
+
+        double t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+        t = Math.max(0, Math.min(1, t));
+
+        double closestX = ax + t * dx;
+        double closestY = ay + t * dy;
+
+        return Math.hypot(px - closestX, py - closestY);
+    }
+
     private boolean doAttachment(Node firstNode, Node secondNode) {
         selectedNodes = null;
 
         loggerPush("DO_ATTACH\t\tDeselection nodes.");
         firstNode.deSelect();
         secondNode.deSelect();
+
+        Vector<Node> nodes = new Vector<>(graph.getNodes());
+        nodes.remove(firstNode);
+        nodes.remove(secondNode);
+
+        AtomicBoolean collision = new AtomicBoolean(false);
+        nodes.forEach(node -> {
+            double distFromCoordsToArch = getDist(firstNode.getPos(), secondNode.getPos(), node.getPos());
+            if(distFromCoordsToArch < minNodeToArch) collision.set(true);
+        });
+        if (collision.get()) {
+            loggerPush("ERROR\t\tCannot attach - on the line between this nodes already has been placed another node");
+            return false;
+        }
 
         loggerPush("DO_ATTACH\t\tTrying add attach in links table.");
         boolean tryAttach = graph.addAttach(firstNode, secondNode);
@@ -874,9 +930,14 @@ public class Main extends Application {
     }
 
     private void randomGraph(final int nodesAmount, int archesAmount) {
+        if(retryCounter.get() >= 50) {
+            loggerPush("ERROR -- PROGRAM CANNOT BUILD GRAPH - TOO DEEP RECURSIVE STACK");
+        }
+
         loggerPush("RANDOM_GEN\t\tStart generating random graph.");
 
         reset();
+
         Random random = new Random();
         for (int countNode = 0; countNode < nodesAmount; countNode++) {
             Node nodeTmp = null;
@@ -892,11 +953,18 @@ public class Main extends Application {
 
         for(int countArches = 0; countArches < archesAmount; countArches++) {
             boolean tryAttach = false;
+            int tryingCounter = 0;
             while(!tryAttach) {
+                if(tryingCounter > archesAmount) {
+                    retryCounter.getAndIncrement();
+                    randomGraph(nodesAmount, archesAmount);
+                    return;
+                }
                 tryAttach = doAttachment(
                         nodes.get(random.nextInt(nodesAmount)),
                         nodes.get(random.nextInt(nodesAmount))
                 );
+                tryingCounter++;
             }
         }
     }
