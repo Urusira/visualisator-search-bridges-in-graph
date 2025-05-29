@@ -134,6 +134,9 @@ public class Main extends Application {
                 tinsStack.clear();
                 tlowsStack.clear();
                 bridges.clear();
+                javafx.scene.Node header = structs.getChildren().getFirst();
+                structs.getChildren().clear();
+                structs.getChildren().add(header);
             } catch (NullPointerException _){}
             algoButtonNext.get().setDisable(false);
             algoButtonPrev.get().setDisable(true);
@@ -312,7 +315,7 @@ public class Main extends Application {
             next.setDisable(true);
             Timeline timeline = new Timeline();
 
-            for(int i = 0; i < bridges.size()-1; i++) {
+            for(int i = 0; i < bridges.size(); i++) {
                 KeyFrame keyFrame1 = new KeyFrame(Duration.millis(
                         i*(1000/algorithmSpeed.getValue())+(1000/algorithmSpeed.getValue())), actionEvent2 -> {
                                 newNextStep();
@@ -417,11 +420,11 @@ public class Main extends Application {
             afterStepColor = actualNode.getColor();
             afterStepIn = actualNode.getTin();
             afterStepLow = actualNode.getLow();
-            afterStepBridge = bridges.get(actualStep.get());
+            afterStepBridge = actualStep.get() < bridges.size() ? bridges.get(actualStep.get()) : bridges.getLast();
         }
         actualStep.getAndIncrement();
         if(actualStep.get() >= bridges.size()) {
-            actualStep.set(bridges.size());
+            actualStep.set(bridges.size()-1);
             return;
         }
         HBox structsRow = (HBox)structs.getChildren().get(actualStep.get()+1);
@@ -453,17 +456,17 @@ public class Main extends Application {
             tinsStack.remove(actualStep.get()+1);
             tlowsStack.remove(actualStep.get()+1);
             bridges.remove(actualStep.get()+1);
-            structs.getChildren().remove(actualStep.get()+1);
+            structs.getChildren().remove(actualStep.get()+2);
             newNextStep();
             return;
         }
         actualNode.updateText();
         loggerPush(
                 "[Next step] Step="+actualStep.get()+
-                        ", node="+actualNode.getNumber()+" ("+nodesStack.get(actualStep.get())+")"+
-                        ", color="+actualNode.getColor()+" ("+colorsStack.get(actualStep.get())+")"+
-                        ", tin="+actualNode.getTin()+" ("+tinsStack.get(actualStep.get())+")"+
-                        ", low="+actualNode.getLow()+" ("+tlowsStack.get(actualStep.get())+")"
+                        ", node="+actualNode.getNumber()+
+                        ", color="+actualNode.getColor()+
+                        ", tin="+actualNode.getTin()+
+                        ", low="+actualNode.getLow()
         );
         if (nextBridge != null) {
             nextBridge.turnOnHighlight();
@@ -506,16 +509,25 @@ public class Main extends Application {
             }
         }
         Object nextTin = tinsStack.get(actualStep.get());
+//        if(nextTin == null) {
+//            nextTin = getPrevParam(tinsStack, actualStep.get(), nextNode != null ? nextNode : actualNode);
+//        }
         Object nextLow = tlowsStack.get(actualStep.get());
+//        if(nextLow == null) {
+//            nextLow = getPrevParam(tlowsStack, actualStep.get(), nextNode != null ? nextNode : actualNode);
+//        }
         int nearbyColorIndex = actualStep.get();
         Color nextColor = colorsStack.get(nearbyColorIndex);
-        while (nextColor == null) {
-            nearbyColorIndex--;
-            if(nearbyColorIndex <= 0) {
-                nextColor = Color.WHITE;
-                break;
+        if(nextColor == null){
+//            nextColor = getPrevParam(colorsStack, actualStep.get(), nextNode != null ? nextNode : actualNode);
+            while (nextColor == null) {
+                nearbyColorIndex--;
+                if (nearbyColorIndex <= 0) {
+                    nextColor = Color.WHITE;
+                    break;
+                }
+                nextColor = colorsStack.get(nearbyColorIndex);
             }
-            nextColor = colorsStack.get(nearbyColorIndex);
         }
         if(nextColor == Color.BLACK) nextColor = Color.GRAY;
         else if(nextColor == Color.GRAY) nextColor = Color.WHITE;
@@ -541,16 +553,46 @@ public class Main extends Application {
         actualNode.updateText();
         loggerPush(
                 "[Back step] Step="+actualStep.get()+
-                        ", node="+actualNode.getNumber()+" ("+nodesStack.get(actualStep.get())+")"+
-                        ", color="+actualNode.getColor()+" ("+colorsStack.get(actualStep.get())+")"+
-                        ", tin="+actualNode.getTin()+" ("+tinsStack.get(actualStep.get())+")"+
-                        ", low="+actualNode.getLow()+" ("+tlowsStack.get(actualStep.get())+")"
+                        ", node="+actualNode.getNumber()+
+                        ", color="+actualNode.getColor()+
+                        ", tin="+actualNode.getTin()+
+                        ", low="+actualNode.getLow()
         );
         if (nextBridge != null) {
             nextBridge.turnOffHighlight();
             loggerPush("Bridge losted... It was edge between "+nextBridge.getTransitNodes()[0].getNumber()+
                     " and "+nextBridge.getTransitNodes()[1].getNumber()+'.');
         }
+    }
+
+    private <T> T getPrevParam(Vector<T> stack, int startStep, Node targetNode) {
+        loggerPush("[FINDprevious]\tMethod was called.");
+        int tempStep = startStep;
+        loggerPush("[FINDprevious]\tInit target node & tempStep. Поиск последнего появления узла");
+        while(nodesStack.get(tempStep) != targetNode) {
+            loggerPush("[FINDprevious]\tИду назад.");
+            tempStep--;
+            if(tempStep <= 0) {
+                loggerPush("[FINDprevious]\tЯ на нуле, выхожу.");
+                break;
+            }
+        }
+        loggerPush("[FINDprevious]\tИщу параметр для этого узла.");
+        while(stack.get(tempStep) == null) {
+            loggerPush("[FINDprevious]\tИду вперёд.");
+            tempStep++;
+            if(tempStep >= nodesStack.size()) {
+                loggerPush("[FINDprevious]\tДальше ничего нет...");
+                tempStep = nodesStack.size()-1;
+                break;
+            }
+            if(nodesStack.get(tempStep) != null && nodesStack.get(tempStep) != actualNode) {
+                loggerPush("[FINDprevious]\tНашёл другой узел, идём к следующему появлению узла.");
+                return getPrevParam(stack, tempStep, targetNode);
+            }
+        }
+        loggerPush("[FINDprevious]\tНАШЁЛ.");
+        return stack.get(tempStep);
     }
 
     //TODO: добавить отображение структур данных. Короче говоря - отобразить метки времени у узлов
