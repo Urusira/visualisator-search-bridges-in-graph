@@ -485,18 +485,7 @@ public class Main extends Application {
     private void newBackStep() {
         HBox structsRow = (HBox)structs.getChildren().get(actualStep.get()+1);
         structsRow.setBackground(Background.fill(Color.WHITE));
-//        int afterStepNode = -1;
-//        Color afterStepColor = Color.AQUA;
-//        int afterStepIn = -1;
-//        int afterStepLow = -1;
-//        Arch afterStepBridge = null;
-//        if(actualStep.get() < bridges.size()){
-//            afterStepNode = actualNode.getNumber();
-//            afterStepColor = actualNode.getColor();
-//            afterStepIn = actualNode.getTin();
-//            afterStepLow = actualNode.getLow();
-//            afterStepBridge = bridges.get(actualStep.get());
-//        }
+
         actualStep.getAndDecrement();
         if(actualStep.get() < 0) {
             actualStep.set(0);
@@ -526,14 +515,7 @@ public class Main extends Application {
         Color nextColor = colorsStack.get(nearbyColorIndex);
         if(nextColor == null){
             nextColor = getPrevParam(colorsStack, actualStep.get(), nextNode != null ? nextNode : actualNode);
-//            while (nextColor == null) {
-//                nearbyColorIndex--;
-//                if (nearbyColorIndex <= 0) {
-//                    nextColor = Color.WHITE;
-//                    break;
-//                }
-//                nextColor = colorsStack.get(nearbyColorIndex);
-//            }
+
         }
         if(nextColor == Color.BLACK) nextColor = Color.GRAY;
         else if(nextColor == Color.GRAY) nextColor = Color.WHITE;
@@ -551,11 +533,7 @@ public class Main extends Application {
         actualNode.setTin(nextTin != null ? (int)nextTin : actualNode.getTin());
         actualNode.setLow(nextLow != null ? (int)nextLow : actualNode.getLow());
         actualNode.setColor(nextColor != null ? nextColor : actualNode.getColor());
-//        if(afterStepNode == actualNode.getNumber() && afterStepColor == actualNode.getColor() &&
-//                afterStepIn == actualNode.getTin() && afterStepLow == actualNode.getLow() && afterStepBridge == nextBridge) {
-//            newBackStep();
-//            return;
-//        }
+
         actualNode.updateText();
         loggerPush(
                 "[Back step] Step="+actualStep.get()+
@@ -734,18 +712,24 @@ public class Main extends Application {
         Button downscale = new Button("-");
         downscale.setPrefWidth(25);
         downscale.setOnAction(_ -> {
-            drawSpace.setScaleX(drawSpace.getScaleX()-0.1);
-            drawSpace.setScaleY(drawSpace.getScaleY()-0.1);
+            drawSpace.setScaleX(drawSpace.getScaleX()*0.9);
+            drawSpace.setScaleY(drawSpace.getScaleY()*0.9);
         });
         Button upscale = new Button("+");
         upscale.setPrefWidth(25);
         upscale.setOnAction(_ -> {
-            drawSpace.setScaleX(drawSpace.getScaleX()+0.1);
-            drawSpace.setScaleY(drawSpace.getScaleY()+0.1);
+            drawSpace.setScaleX(drawSpace.getScaleX()*1.1);
+            drawSpace.setScaleY(drawSpace.getScaleY()*1.1);
+        });
+
+        Button resetscale = new Button("Reset scale");
+        resetscale.setOnAction(_ -> {
+            drawSpace.setScaleX(1);
+            drawSpace.setScaleY(1);
         });
 
         menuBar.getMenus().addAll(fileMenu, optionsMenu);
-        toolBar.getItems().addAll(new Label("Change drawing panel scale: "), downscale, upscale);
+        toolBar.getItems().addAll(new Label("Change drawing panel scale: "), downscale, upscale, resetscale);
         return toolBar;
     }
 
