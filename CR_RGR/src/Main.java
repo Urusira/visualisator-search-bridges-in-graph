@@ -1,6 +1,7 @@
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -17,7 +18,6 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.util.Pair;
-import kotlin.jvm.Synchronized;
 
 import java.io.*;
 import java.time.LocalDateTime;
@@ -28,6 +28,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 
 public class Main extends Application {
+    public static Locale currentLocale = new Locale("en");
+    public static ResourceBundle bundle = ResourceBundle.getBundle("lang.lang", currentLocale);
+
     private static Graph graph = new Graph();
     private final static Vector<String> titlesVec = new Vector<>();
     private static String title;
@@ -106,19 +109,19 @@ public class Main extends Application {
     }
 
     private void reset() {
-        loggerPush("RESET\t\tStart resetting draw panel.");
+        loggerPush(bundle.getString("LOG_startReset"));
         selectedNodes = null;
         graph = new Graph();
-        loggerPush("RESET\t\tGraph has cleared.");
+        loggerPush(bundle.getString("LOG_graphCleared"));
         drawSpace.getChildren().clear();
-        loggerPush("RESET\t\tPanel has cleared.");
+        loggerPush(bundle.getString("LOG_panelCleared"));
     }
 
     private BorderPane rootInit() {
         drawSpace = new Pane();
         drawSpace.setId("drawSpace");
 
-        Tab graphBuildTab = new Tab("Graph building", graphBuilderInit());
+        Tab graphBuildTab = new Tab(bundle.getString("EL_tabBuilder"), graphBuilderInit());
         graphBuildTab.closableProperty().set(false);
         graphBuildTab.setOnSelectionChanged(_ -> {
             algoPanelBlocker.setVisible(true);
@@ -146,7 +149,7 @@ public class Main extends Application {
             algoButtonPrev.get().setDisable(true);
         });
 
-        Tab algorythmTab = new Tab("Bridges search", algoPanelInit());
+        Tab algorythmTab = new Tab(bundle.getString("EL_tabAlgo"), algoPanelInit());
         algorythmTab.closableProperty().set(false);
         algorythmTab.setOnSelectionChanged(_ -> {
             manualDraw_Mode = manualModes.NONE;
@@ -172,8 +175,8 @@ public class Main extends Application {
         logPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         logPanel.setContent(logger);
         logPanel.vvalueProperty().bind(logger.heightProperty());
-        Label logerTitle = new Label("Logs");
-        Button clearLogger = new Button("Clear logs");
+        Label logerTitle = new Label(bundle.getString("EL_logsTitle"));
+        Button clearLogger = new Button(bundle.getString("EL_clearLogs"));
         clearLogger.setOnAction(_ -> {
             logger.getChildren().clear();
         });
@@ -197,19 +200,19 @@ public class Main extends Application {
         structsScrollPanel.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         structsScrollPanel.hvalueProperty().set(0);
         structsScrollPanel.setContent(structs);
-        HBox nodesLabel = new HBox(new Label("Node"));
+        HBox nodesLabel = new HBox(new Label(bundle.getString("EL_structsNode")));
         nodesLabel.setPrefWidth(35);
         nodesLabel.setAlignment(Pos.BASELINE_CENTER);
-        HBox colorsLabel = new HBox(new Label("Color"));
+        HBox colorsLabel = new HBox(new Label(bundle.getString("EL_structsColor")));
         colorsLabel.setPrefWidth(70);
         colorsLabel.setAlignment(Pos.BASELINE_CENTER);
-        HBox tinsLabel = new HBox(new Label("Tin"));
+        HBox tinsLabel = new HBox(new Label(bundle.getString("EL_structsTin")));
         tinsLabel.setPrefWidth(35);
         tinsLabel.setAlignment(Pos.BASELINE_CENTER);
-        HBox lowsLabel = new HBox(new Label("Low"));
+        HBox lowsLabel = new HBox(new Label(bundle.getString("EL_structsLow")));
         lowsLabel.setPrefWidth(35);
         lowsLabel.setAlignment(Pos.BASELINE_CENTER);
-        HBox bridgeLabel = new HBox(new Label("Bridge"));
+        HBox bridgeLabel = new HBox(new Label(bundle.getString("EL_structsBridge")));
         bridgeLabel.setPrefWidth(45);
         bridgeLabel.setAlignment(Pos.BASELINE_CENTER);
         structs.getChildren().add(new HBox(nodesLabel, colorsLabel, tinsLabel, lowsLabel, bridgeLabel));
@@ -226,39 +229,39 @@ public class Main extends Application {
     }
 
     private VBox graphBuilderInit() {
-        Label tbLabel = new Label("Manual building graph");
+        Label tbLabel = new Label(bundle.getString("EL_bderManualTitle"));
         tbLabel.setId("rightPanelLabel");
 
-        Button nodesMode = new Button("Set\nnodes");
+        Button nodesMode = new Button(bundle.getString("EL_bderBtnNod"));
         nodesMode.setOnAction(actionEvent -> {
             manualDraw_Mode = manualModes.NODES;
         });
 
-        Button archesMode = new Button("Set\narches");
+        Button archesMode = new Button(bundle.getString("EL_bderBtnArc"));
         archesMode.setOnAction(actionEvent -> {
             manualDraw_Mode = manualModes.ARCHES;
         });
 
-        Button delMode = new Button("Delete");
+        Button delMode = new Button(bundle.getString("EL_bderBtnDel"));
         delMode.setOnAction(actionEvent -> {
             manualDraw_Mode = manualModes.DELETE;
         });
 
-        Button resetButton = new Button("Reset");
+        Button resetButton = new Button(bundle.getString("EL_bderBtnRes"));
         resetButton.setOnAction(actionEvent -> {
             reset();
         });
 
-        Label randomLabel = new Label("Random graph generation");
+        Label randomLabel = new Label(bundle.getString("EL_bderRandomTitle"));
         TextField nodesAmount = new TextField();
         TextField archesAmount = new TextField();
 
-        nodesAmount.setPromptText("Nodes amount");
-        archesAmount.setPromptText("Arches amount");
+        nodesAmount.setPromptText(bundle.getString("EL_bderPmtNode"));
+        archesAmount.setPromptText(bundle.getString("EL_bderPmtArch"));
 
         HBox randomParams = new HBox(nodesAmount, archesAmount);
 
-        Button randomGraph = new Button("Generate");
+        Button randomGraph = new Button(bundle.getString("EL_bderBtnGen"));
         randomGraph.setOnAction(actionEvent -> {
             int nodAmoInt;
             int archAmoInt;
@@ -268,7 +271,7 @@ public class Main extends Application {
             try {
                 nodAmoInt = Integer.parseInt(nodesAmount.getText());
             } catch (NumberFormatException e) {
-                wrongInputAlert("Insert nodes amount!");
+                wrongInputAlert(bundle.getString("ALERT_incorrIn"));
                 return;
             }
 
@@ -280,7 +283,7 @@ public class Main extends Application {
                     archAmoInt = Integer.parseInt(archesAmount.getText());
                     if(archAmoInt > maxArches) {archAmoInt = maxArches;}
                 } catch (NumberFormatException e) {
-                    wrongInputAlert("Incorrect input");
+                    wrongInputAlert(bundle.getString("ALERT_incorrIn2"));
                     return;
                 }
             }
@@ -288,7 +291,7 @@ public class Main extends Application {
                 randomGraph(nodAmoInt, archAmoInt);
             }
             else {
-                wrongInputAlert("Nodes amount and arches amount cannot be zero!");
+                wrongInputAlert(bundle.getString("ALERT_zeroAmo"));
             }
         });
 
@@ -301,19 +304,19 @@ public class Main extends Application {
     }
 
     private StackPane algoPanelInit() {
-        Label algSpeedLabel = new Label("Speed of visualisation");
+        Label algSpeedLabel = new Label(bundle.getString("EL_algoSpd"));
         Slider algorithmSpeed = new Slider(1d, 10, 1);
         algorithmSpeed.setShowTickLabels(true);
         algorithmSpeed.setShowTickMarks(true);
 
-        Button startRun = new Button("Start auto");
+        Button startRun = new Button(bundle.getString("EL_algoBtnStartVis"));
         startRun.setId("startAlgo");
 
-        Button previous = new Button("Previous");
+        Button previous = new Button(bundle.getString("EL_algoBtnBack"));
         previous.setDisable(true);
         algoButtonPrev.set(previous);
 
-        Button next = new Button("Next");
+        Button next = new Button(bundle.getString("EL_algoBtnNext"));
         algoButtonNext.set(next);
 
         startRun.setOnAction(actionEvent -> {
@@ -353,12 +356,14 @@ public class Main extends Application {
 
 
         HBox manualSteps = new HBox(previous, next);
+        manualSteps.setAlignment(Pos.BASELINE_CENTER);
+        manualSteps.setSpacing(5);
 
         AnchorPane overlay = new AnchorPane();
         overlay.setId("algorithmBlocker");
         overlay.setPickOnBounds(true);
 
-        Button startButton = new Button("Start");
+        Button startButton = new Button(bundle.getString("EL_algoStart"));
         startButton.setOnAction(actionEvent -> {
             try {
                 algoStack = new Vector<>();
@@ -395,7 +400,7 @@ public class Main extends Application {
                     structs.getChildren().add(temp);
                 }
             } catch (NoSuchElementException e) {
-                wrongInputAlert("At first create/load/generate graph!");
+                wrongInputAlert(bundle.getString("ALERT_needGraph"));
             }
         });
 
@@ -468,20 +473,19 @@ public class Main extends Application {
         }
         actualNode.updateText();
         loggerPush(
-                "[Next step] Step="+actualStep.get()+
-                        ", node="+actualNode.getNumber()+
-                        ", color="+actualNode.getColor()+
-                        ", tin="+actualNode.getTin()+
-                        ", low="+actualNode.getLow()
+                bundle.getString("LOG_nextStep")+"="+actualStep.get()+
+                        ", "+bundle.getString("LOG_stepNode")+"="+actualNode.getNumber()+
+                        ", "+bundle.getString("LOG_stepColor")+"="+actualNode.getColor()+
+                        ", "+bundle.getString("LOG_stepTin")+"="+actualNode.getTin()+
+                        ", "+bundle.getString("LOG_stepLow")+"="+actualNode.getLow()
         );
         if (nextBridge != null) {
             nextBridge.turnOnHighlight();
-            loggerPush("Bridge founded! Its - edge between "+nextBridge.getTransitNodes()[0].getNumber()+
-                    " and "+nextBridge.getTransitNodes()[1].getNumber());
+            loggerPush(bundle.getString("LOG_bridgeFound")+" "+nextBridge.getTransitNodes()[0].getNumber()+
+                    "-"+nextBridge.getTransitNodes()[1].getNumber());
         }
     }
 
-//TODO заменить авте на бефо, опечатка
     private void newBackStep() {
         HBox structsRow = (HBox)structs.getChildren().get(actualStep.get()+1);
         structsRow.setBackground(Background.fill(Color.WHITE));
@@ -504,10 +508,12 @@ public class Main extends Application {
             }
         }
         Object nextTin = tinsStack.get(actualStep.get());
+//WIP
 //        if(nextTin == null) {
 //            nextTin = getPrevParam(tinsStack, actualStep.get(), nextNode != null ? nextNode : actualNode);
 //        }
         Object nextLow = tlowsStack.get(actualStep.get());
+//WIP
 //        if(nextLow == null) {
 //            nextLow = getPrevParam(tlowsStack, actualStep.get(), nextNode != null ? nextNode : actualNode);
 //        }
@@ -536,48 +542,40 @@ public class Main extends Application {
 
         actualNode.updateText();
         loggerPush(
-                "[Back step] Step="+actualStep.get()+
-                        ", node="+actualNode.getNumber()+
-                        ", color="+actualNode.getColor()+
-                        ", tin="+actualNode.getTin()+
-                        ", low="+actualNode.getLow()
+                bundle.getString("LOG_backStep")+"="+actualStep.get()+
+                        ", "+bundle.getString("LOG_stepNode")+"="+actualNode.getNumber()+
+                        ", "+bundle.getString("LOG_stepColor")+"="+actualNode.getColor()+
+                        ", "+bundle.getString("LOG_stepTin")+"="+actualNode.getTin()+
+                        ", "+bundle.getString("LOG_stepLow")+"="+actualNode.getLow()
         );
         if (nextBridge != null) {
             nextBridge.turnOffHighlight();
-            loggerPush("Bridge losted... It was edge between "+nextBridge.getTransitNodes()[0].getNumber()+
-                    " and "+nextBridge.getTransitNodes()[1].getNumber()+'.');
+            loggerPush(bundle.getString("LOG_bridgeLost")+" "+nextBridge.getTransitNodes()[0].getNumber()+
+                    "-"+nextBridge.getTransitNodes()[1].getNumber()+'.');
         }
     }
 
     private <T> T getPrevParam(Vector<T> stack, int startStep, Node targetNode) {
-        loggerPush("[FINDprevious]\t\tMethod was called.");
         int tempStep = startStep;
-        loggerPush("[FINDprevious]\t\tInit target node & tempStep. Try found last entry this node");
         while(nodesStack.get(tempStep) != targetNode) {
-            loggerPush("[FINDprevious]\t\tGo to back.");
             tempStep--;
             if(tempStep <= 0) {
-                loggerPush("[FINDprevious]\t\tEnd stack. Return.");
                 break;
             }
         }
-        loggerPush("[FINDprevious]\tTry found parameter for this node.");
         T parameter = null;
         while(stack.get(tempStep) == null) {
-            loggerPush("[FINDprevious]\t\tGo forward.");
             tempStep++;
             parameter = stack.get(tempStep) != null ? stack.get(tempStep) : parameter;
             if(tempStep >= nodesStack.size()) {
-                loggerPush("[FINDprevious]\t\tEnd stack.");
                 tempStep = nodesStack.size()-1;
                 break;
             }
             if(nodesStack.get(tempStep) != null && nodesStack.get(tempStep) != actualNode && parameter == null) {
-                loggerPush("[FINDprevious]\t\tFinded another node, go deeper.");
                 return getPrevParam(stack, tempStep, targetNode);
             }
         }
-        loggerPush("[FINDprevious]\t\tGot it.");
+        loggerPush(bundle.getString("LOG_restoreParam"));
         return stack.get(tempStep);
     }
 
@@ -665,9 +663,9 @@ public class Main extends Application {
         ToolBar toolBar = new ToolBar(menuBar);
         toolBar.setOrientation(Orientation.HORIZONTAL);
 
-        Menu fileMenu = new Menu("File");
+        Menu fileMenu = new Menu(bundle.getString("EL_menuFile"));
 
-        MenuItem saveItem = new MenuItem("Save");
+        MenuItem saveItem = new MenuItem(bundle.getString("EL_menuFileSave"));
         saveItem.setOnAction(actionEvent -> {
             try {
                 saveGraph(false);
@@ -676,7 +674,7 @@ public class Main extends Application {
             }
         });
 
-        MenuItem saveAsItem = new MenuItem("Save as...");
+        MenuItem saveAsItem = new MenuItem(bundle.getString("EL_menuFileSaveAs"));
         saveAsItem.setOnAction(actionEvent -> {
             try {
                 saveGraph(true);
@@ -685,10 +683,10 @@ public class Main extends Application {
             }
         });
 
-        MenuItem loadItem = new MenuItem("Load");
+        MenuItem loadItem = new MenuItem(bundle.getString("EL_menuFileLoad"));
         loadItem.setOnAction(actionEvent -> {
             try {
-                loadGraph(false);
+                loadGraph();
             } catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
             }
@@ -696,62 +694,73 @@ public class Main extends Application {
 
         fileMenu.getItems().addAll(saveItem, saveAsItem, loadItem);
 
-        Menu optionsMenu = new Menu("Options");
+        Menu optionsMenu = new Menu(bundle.getString("EL_menuOpts"));
 
-        MenuItem minDistNodes = new MenuItem("Min. distance");
+        MenuItem minDistNodes = new MenuItem(bundle.getString("EL_menuOptsNNDist"));
         minDistNodes.setOnAction(actionEvent -> insertMinDist());
 
-        MenuItem minAngleNodes = new MenuItem("Min. angle btw nodes");
-        minAngleNodes.setOnAction(actionEvent -> insertminAngleBTWNodes());
+        MenuItem minNodeArchDist = new MenuItem(bundle.getString("EL_menuOptsNADist"));
+        minNodeArchDist.setOnAction(actionEvent -> insertminMinDistToArch());
 
-        MenuItem nodesRadius = new MenuItem("Nodes radius");
+        MenuItem nodesRadius = new MenuItem(bundle.getString("EL_menuOptsNodRad"));
         nodesRadius.setOnAction(actionEvent -> insertRadiusNodes());
 
-        optionsMenu.getItems().addAll(minDistNodes, minAngleNodes, nodesRadius);
+        optionsMenu.getItems().addAll(minDistNodes, minNodeArchDist, nodesRadius);
 
-        Button downscale = new Button("-");
+        Button downscale = new Button(bundle.getString("EL_menuDownscale"));
         downscale.setPrefWidth(25);
         downscale.setOnAction(_ -> {
             drawSpace.setScaleX(drawSpace.getScaleX()*0.9);
             drawSpace.setScaleY(drawSpace.getScaleY()*0.9);
         });
-        Button upscale = new Button("+");
+        Button upscale = new Button(bundle.getString("EL_menuUppscale"));
         upscale.setPrefWidth(25);
         upscale.setOnAction(_ -> {
             drawSpace.setScaleX(drawSpace.getScaleX()*1.1);
             drawSpace.setScaleY(drawSpace.getScaleY()*1.1);
         });
 
-        Button resetscale = new Button("Reset scale");
+        Button resetscale = new Button(bundle.getString("EL_menuResetScale"));
         resetscale.setOnAction(_ -> {
             drawSpace.setScaleX(1);
             drawSpace.setScaleY(1);
         });
 
+        Button changeLang = new Button(bundle.getString("EL_changeLang"));
+        changeLang.setOnAction(_ -> {
+            changeLang();
+        });
+
         menuBar.getMenus().addAll(fileMenu, optionsMenu);
-        toolBar.getItems().addAll(new Label("Change drawing panel scale: "), downscale, upscale, resetscale);
+        toolBar.getItems().addAll(
+                new Label(bundle.getString("EL_menuScalesLabel")+": "),
+                downscale, upscale, resetscale,
+                new Label(bundle.getString("EL_langLabel")+": "),
+                changeLang,
+                new Label(bundle.getString("EL_langAttention"))
+        );
         return toolBar;
     }
 
     private void insertMinDist() {
         TextInputDialog dialog = new TextInputDialog(String.valueOf(minNodesDist));
-        dialog.setTitle("Insert minimal distance");
-        dialog.setHeaderText("Please, insert new minimal distance between nodes.");
-        dialog.setContentText("Minimal distance:");
+        dialog.setTitle(bundle.getString("DIA_titleMinDist"));
+        dialog.setHeaderText(bundle.getString("DIA_headNNDist"));
+        dialog.setContentText(bundle.getString("DIA_contentNNDist")+":");
         dialog.showAndWait().ifPresent(newValue -> {
             if(Double.parseDouble(newValue) > 0) {
                 minNodesDist = Double.parseDouble(newValue);
             } else {
-                wrongInputAlert("Input value must be only greater than 0!");
+                wrongInputAlert(bundle.getString("ALERT_negateError"));
             }
         });
     }
 
     private void insertRadiusNodes() {
         TextInputDialog dialog = new TextInputDialog(String.valueOf(nodesRadius));
-        dialog.setTitle("Insert nodes radius");
-        dialog.setHeaderText("Please, insert new radius of nodes.");
-        dialog.setContentText("Radius (7 - min):");
+        dialog.setTitle(bundle.getString("DIA_titleRadius"));
+        dialog.setHeaderText(bundle.getString("DIA_headRadius"));
+        dialog.setContentText(bundle.getString("DIA_contentRadius")+":");
         dialog.showAndWait().ifPresent(newValue -> {
             if(Double.parseDouble(newValue) >= 7d) {
                 double old = nodesRadius;
@@ -766,29 +775,29 @@ public class Main extends Application {
                     }
                 }
             } else {
-                wrongInputAlert("Input value must be greater than 7!");
+                wrongInputAlert(bundle.getString("ALERT_greaterThan7"));
             }
         });
     }
 
-    private void insertminAngleBTWNodes() {
+    private void insertminMinDistToArch() {
         TextInputDialog dialog = new TextInputDialog(String.valueOf(minNodeToArch));
-        dialog.setTitle("Insert minimal angle");
-        dialog.setHeaderText("Please, insert new minimal angle between nodes.");
-        dialog.setContentText("Minimal angle:");
+        dialog.setTitle(bundle.getString("DIA_titleMinDist"));
+        dialog.setHeaderText(bundle.getString("DIA_headNADist"));
+        dialog.setContentText(bundle.getString("DIA_contentNADist")+":");
         dialog.showAndWait().ifPresent(newValue -> {
             double val = Double.parseDouble(newValue);
-            if(val >= 0 || val <= 360) {
+            if(val > 0) {
                 minNodeToArch = val;
             } else {
-                wrongInputAlert("Input value must be only greater or equals than 0 and lower or equals 360!");
+                wrongInputAlert(bundle.getString("ALERT_negateError"));
             }
         });
     }
 
     private Node placeGraphNode(Coords coords, int number) {
         if(coords.getX() <= nodesRadius || coords.getX() >= drawSpace.getWidth()-nodesRadius || coords.getY() <= nodesRadius || coords.getY() >= drawSpace.getHeight()-nodesRadius) {
-            loggerPush("ERROR\t\tToo near to border drawing panel.");
+            loggerPush(bundle.getString("LOG_borderClose"));
             return null;
         }
 
@@ -805,7 +814,7 @@ public class Main extends Application {
             });
         });
         if (collision.get()) {
-            loggerPush("ERROR\t\tCannot place node at here. Too close to another arch or node.");
+            loggerPush(bundle.getString("LOG_collision"));
             return null;
         }
 
@@ -823,7 +832,7 @@ public class Main extends Application {
             switch (manualDraw_Mode) {
                 case manualModes.ARCHES: {
                     node.select();
-                    loggerPush("Clicked inside node " + node.getNumber() + ".");
+                    loggerPush(bundle.getString("LOG_clickInside")+" " + node.getNumber() + ".");
                     if (selectedNodes == null || selectedNodes == node) {
                         selectedNodes = node;
                     } else {
@@ -861,7 +870,7 @@ public class Main extends Application {
     private boolean doAttachment(Node firstNode, Node secondNode) {
         selectedNodes = null;
 
-        loggerPush("DO_ATTACH\t\tDeselection nodes.");
+        loggerPush(bundle.getString("LOG_deselectNodes"));
         firstNode.deSelect();
         secondNode.deSelect();
 
@@ -875,50 +884,51 @@ public class Main extends Application {
             if(distFromCoordsToArch < minNodeToArch) collision.set(true);
         });
         if (collision.get()) {
-            loggerPush("ERROR\t\tCannot attach - on the line between this nodes already has been placed another node");
+            loggerPush(bundle.getString("LOG_collisionTrace"));
             return false;
         }
 
-        loggerPush("DO_ATTACH\t\tTrying add attach in links table.");
+        loggerPush(bundle.getString("LOG_tryingAttach"));
         boolean tryAttach = graph.addAttach(firstNode, secondNode);
         if(!tryAttach) {
-            loggerPush("ERROR\t\tCannot attach.");
+            loggerPush(bundle.getString("LOG_cannotAttach"));
             return false;
         }
 
-        loggerPush("DO_ATTACH\t\tGet coordinates, create line.");
+        loggerPush(bundle.getString("LOG_makingAttach"));
         Coords fstCenter = firstNode.getPos();
         Coords sndCenter = secondNode.getPos();
 
         Line lineTmp = new Line(fstCenter.getX(), fstCenter.getY(), sndCenter.getX(), sndCenter.getY());
 
-        loggerPush("DO_ATTACH\t\tCreating arch.");
+        loggerPush(bundle.getString("LOG_creatingArch"));
         Arch arch = new Arch(firstNode, secondNode, lineTmp);
 
-        loggerPush("DO_ATTACH\t\tAdd attachments in nodes.");
+        loggerPush(bundle.getString("LOG_addAttachInNodes"));
         firstNode.addAttachment(arch);
         secondNode.addAttachment(arch);
 
-        loggerPush("DO_ATTACH\t\tCreate mouse click handler.");
+        loggerPush(bundle.getString("LOG_createArchHandler"));
         lineTmp.setOnMouseClicked(mouseEvent -> {
             if(manualDraw_Mode == manualModes.DELETE) {
                 graph.deleteArch(firstNode, secondNode, arch, drawSpace);
             }
         });
 
-        loggerPush("DO_ATTACH\t\tAdd line to draw panel.");
+        loggerPush(bundle.getString("LOG_drawindLine"));
         drawSpace.getChildren().addFirst(lineTmp);
 
-        loggerPush("DO_ATTACH\t\tSuccessful attach.");
+        loggerPush(bundle.getString("LOG_succesAttach"));
         return true;
     }
 
     private void randomGraph(final int nodesAmount, int archesAmount) {
         if(retryCounter.get() >= 50) {
-            loggerPush("ERROR -- PROGRAM CANNOT BUILD GRAPH - TOO DEEP RECURSIVE STACK");
+            loggerPush(bundle.getString("LOG_cannotGenerate"));
+            return;
         }
 
-        loggerPush("RANDOM_GEN\t\tStart generating random graph.");
+        loggerPush(bundle.getString("LOG_startGenerate"));
 
         reset();
 
@@ -955,13 +965,13 @@ public class Main extends Application {
 
     private void saveGraph(boolean asNew) throws IOException {
         var now = LocalDateTime.now();
-        loggerPush("Saving...");
+        loggerPush(bundle.getString("LOG_startSave"));
 
         if(asNew) {
             FileChooser fc = new FileChooser();
-            fc.setTitle("Graph save");
-            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Graphs files", "*.graph"));
-            fc.setInitialFileName("Graph-Saved-" + now.getHour() + now.getMinute() + now.getSecond() + now.getNano());
+            fc.setTitle(bundle.getString("DIA_titleSave"));
+            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter(bundle.getString("DIA_formatsFile"), "*.graph"));
+            fc.setInitialFileName(bundle.getString("DIA_fileName") + "-" + now.getHour() + now.getMinute() + now.getSecond() + now.getNano());
             choosenFile = fc.showSaveDialog(mainStage);
         }
 
@@ -970,15 +980,15 @@ public class Main extends Application {
         try {
             writer = new BufferedWriter(new FileWriter(choosenFile));
         } catch (NullPointerException e) {
-            loggerPush("WARNING\t\tNot choose save path.");
+            loggerPush(bundle.getString("LOG_haventSavePath"));
             if(!asNew) {
-                loggerPush("SAVING\t\tChoose new save path.");
+                loggerPush(bundle.getString("LOG_newPath"));
                 saveGraph(true);
             }
             return;
         }
 
-        loggerPush("SAVING\t\tSaving init");
+        loggerPush(bundle.getString("LOG_savingInit"));
         writer.write("FILE_TYPE-GRAPH");
         writer.newLine();
         writer.write(String.valueOf(now));
@@ -988,88 +998,79 @@ public class Main extends Application {
         writer.newLine();
         writer.close();
         titleUpdate();
-        loggerPush("SAVING\t\tSaved done");
+        loggerPush(bundle.getString("LOG_savingDone"));
     }
 
-    private void loadGraph(boolean reload) throws FileNotFoundException {
+    private void loadGraph() throws FileNotFoundException {
         algoPanelBlocker.setVisible(true);
 
-        loggerPush("LOADING\t\tLoading...");
+        loggerPush(bundle.getString("LOG_statLoad"));
         Scanner sc;
 
-        if(!reload){
-            FileChooser fc = new FileChooser();
-            fc.setTitle("Selection graph file");
-            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Graphs files", "*.graph", "*.txt"));
-            try {
-                fc.setInitialDirectory(choosenFile.getParentFile());
-            } catch (NullPointerException e) {
-                loggerPush("WARNING\t\tBuffer haven't file. Init select new file.");
-            }
-            choosenFile = fc.showOpenDialog(mainStage);
+        FileChooser fc = new FileChooser();
+        fc.setTitle(bundle.getString("DIA_titleLoad"));
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter(bundle.getString("DIA_formatsFile"), "*.graph", "*.txt"));
+        try {
+            fc.setInitialDirectory(choosenFile.getParentFile());
+        } catch (NullPointerException e) {
+            loggerPush(bundle.getString("LOG_bufferEmpty"));
         }
+        choosenFile = fc.showOpenDialog(mainStage);
         try {
             sc = new Scanner(choosenFile);
-            loggerPush("LOADING\t\tReading file.");
+            loggerPush(bundle.getString("LOG_readFile"));
         } catch (FileNotFoundException e) {
-            loggerPush("ERROR\t\tError loading! File not found.");
+            loggerPush(bundle.getString("LOG_loadNotFound"));
             return;
         } catch (NullPointerException e) {
-            loggerPush("WARNING\t\tFile not choose.");
-                                                                            //TODO: Дебаговая штука, удалить в финале
-                                                                            if(reload) {
-                                                                                loadGraph(false);
-                                                                            }
+            loggerPush(bundle.getString("LOG_fileNotChoosed"));
             return;
         }
 
         String fileTypeCheck = sc.nextLine();
         if(!Objects.equals(fileTypeCheck, "FILE_TYPE-GRAPH")) {
-            loggerPush("ERROR\t\tFile does not exists, wrong type.");
+            loggerPush(bundle.getString("LOG_wrongFile"));
             return;
         }
 
         reset();
-        loggerPush("LOADING\t\tScreen has been cleared.\n");
-
         sc.nextLine();
-        loggerPush("LOADING\t\tSkip fst line.");
 
         while(sc.hasNextLine()) {
             String loadedLine = sc.nextLine();
-            loggerPush("LOADING\t\tGet new line.");
+            loggerPush(bundle.getString("LOG_readNextLine"));
 
             String[] cordTxt = loadedLine.substring(loadedLine.lastIndexOf("["), loadedLine.lastIndexOf("]")).replaceAll("[^\\d.\\s]", "").split(" ");
 
             int number = Integer.parseInt(loadedLine.substring(0, loadedLine.indexOf(" ")));
-            loggerPush("LOADING\t\tGet node number - "+number);
+            loggerPush(bundle.getString("LOG_getNodeNum")+" - "+number);
 
             Coords coords = new Coords(Double.parseDouble(cordTxt[0]), Double.parseDouble(cordTxt[1]));
-            loggerPush("LOADING\t\tGet node cords: "+coords);
+            loggerPush(bundle.getString("LOG_getNodeCords")+": "+coords);
 
 
             Node nodeTemp = placeGraphNode(coords, number);
-            loggerPush("LOADING\t\tNode "+nodeTemp.getNumber()+" has been created and added to graph.\n");
+            loggerPush(bundle.getString("LOG_nodeCreated1")+" "+nodeTemp.getNumber()+" "+bundle.getString("LOG_nodeCreated2"));
 
             String[] attachmentsTxt = loadedLine.substring(loadedLine.indexOf("["), loadedLine.indexOf("]")).replaceAll("[^\\d.\\s]", "").split(" ");
-            loggerPush("LOADING\t\tAttachments of node "+nodeTemp.getNumber()+":"+ Arrays.toString(attachmentsTxt));
+            loggerPush(bundle.getString("LOG_attachments")+" "+nodeTemp.getNumber()+":"+ Arrays.toString(attachmentsTxt));
 
             for (String attachNode : attachmentsTxt) {
-                loggerPush("LOADING\t\tCheck attaches for "+nodeTemp.getNumber()+"...");
+                loggerPush(bundle.getString("LOG_checkAttaches")+" "+nodeTemp.getNumber()+"...");
 
                 if (attachNode != null && !attachNode.isEmpty()) {
                     Node secondNode = graph.findWithNum(Integer.parseInt(attachNode));
                     if (secondNode != null) {
-                        loggerPush("LOADING\t\tLooking for " + attachNode);
+                        loggerPush(bundle.getString("LOG_lookingFor")+" " + attachNode);
                         doAttachment(nodeTemp, secondNode);
-                        loggerPush("LOADING\t\tSuccess attach " + nodeTemp.getNumber() + " and " + attachNode);
+                        loggerPush(bundle.getString("LOG_loadSuccesAttach")+" " + nodeTemp.getNumber() + "-" + attachNode);
                     }
                     else {
-                        loggerPush("WARNING\t\tAttachment nodes not yet created.");
+                        loggerPush(bundle.getString("LOG_attachAlrdCreated"));
                     }
                 }
                 else {
-                    loggerPush("WARNING\t\tNode haven't attaches.");
+                    loggerPush(bundle.getString("LOG_haventAttaches"));
                 }
             }
         }
@@ -1078,17 +1079,29 @@ public class Main extends Application {
 
     private void wrongInputAlert(String desc) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Wrong input");
+        alert.setTitle(bundle.getString("ALERT_title"));
         alert.setHeaderText(null);
         alert.setContentText(desc);
         alert.showAndWait();
     }
-    
-    //TODO: ЗДЕСЬ БУДЕТ ВЫВОД ТЕКСТА В ПАНЕЛЬКУ ВНИЗУ ПРОГРАММЫ
+
     private void loggerPush(String text) {
         System.out.println(text);
         Text log = new Text(text);
         log.setTextAlignment(TextAlignment.LEFT);
         logger.getChildren().add(log);
+    }
+
+    public void changeLang() {
+        if(currentLocale.getLanguage() == "en") {
+            currentLocale = new Locale("ru");
+        } else {
+            currentLocale = new Locale("en");
+        }
+
+        bundle = ResourceBundle.getBundle("lang.lang", currentLocale);
+
+        mainStage.close();
+        Platform.runLater(() -> new Main().start(new Stage()));
     }
 }
