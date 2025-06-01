@@ -78,6 +78,7 @@ public class Main extends Application {
 
         Random rd = new Random();
         title = titlesVec.get(rd.nextInt(titlesVec.size()));
+        //title = "Поиск мостов";
 
         launch(args);
     }
@@ -936,6 +937,11 @@ public class Main extends Application {
         for (int countNode = 0; countNode < nodesAmount; countNode++) {
             Node nodeTmp = null;
             while(nodeTmp == null) {
+                retryCounter.getAndIncrement();
+                if(retryCounter.get() >= 50) {
+                    loggerPush(bundle.getString("LOG_cannotGenerate"));
+                    return;
+                }
                 double randomX = random.nextDouble(drawSpace.getWidth());
                 double randomY = random.nextDouble(drawSpace.getHeight());
                 Coords coords = new Coords(randomX, randomY);
@@ -944,6 +950,7 @@ public class Main extends Application {
         }
 
         Vector<Node> nodes = graph.getNodes();
+        retryCounter.set(0);
 
         for(int countArches = 0; countArches < archesAmount; countArches++) {
             boolean tryAttach = false;
@@ -1090,6 +1097,7 @@ public class Main extends Application {
         Text log = new Text(text);
         log.setTextAlignment(TextAlignment.LEFT);
         logger.getChildren().add(log);
+        if(logger.getChildren().size()>2000) logger.getChildren().removeFirst();
     }
 
     public void changeLang() {
@@ -1100,6 +1108,32 @@ public class Main extends Application {
         }
 
         bundle = ResourceBundle.getBundle("lang.lang", currentLocale);
+
+        reset();
+
+        algoPanelBlocker.setVisible(true);
+        timer = 0;
+        graph.getNodes().forEach(node -> {
+            node.setTin(-1);
+            node.setLow(-1);
+            node.updateText();
+            node.setColor(Color.WHITE);
+            node.turnOffHighlight();
+        });
+        actualStep.set(-1);
+        bridges.forEach(arch -> {if(arch!=null) arch.turnOffHighlight();});
+        try{
+            nodesStack.clear();
+            colorsStack.clear();
+            tinsStack.clear();
+            tlowsStack.clear();
+            bridges.clear();
+            javafx.scene.Node header = structs.getChildren().getFirst();
+            structs.getChildren().clear();
+            structs.getChildren().add(header);
+        } catch (NullPointerException _){}
+        algoButtonNext.get().setDisable(false);
+        algoButtonPrev.get().setDisable(true);
 
         mainStage.close();
         Platform.runLater(() -> new Main().start(new Stage()));
