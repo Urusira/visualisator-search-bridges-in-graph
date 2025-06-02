@@ -90,8 +90,8 @@ public class Main extends Application {
         BorderPane root = rootInit();
 
         titleUpdate();
-        stage.setMinWidth(640);
-        stage.setMinHeight(360);
+        stage.setMinWidth(720);
+        stage.setMinHeight(440);
         stage.setMaximized(true);
 
         root.getStylesheets().add("main/resources/main.css");
@@ -292,7 +292,7 @@ public class Main extends Application {
                 randomGraph(nodAmoInt, archAmoInt);
             }
             else {
-                wrongInputAlert(bundle.getString("ALERT_zeroAmo"));
+                wrongInputAlert(bundle.getString("ALERT_negateError"));
             }
         });
 
@@ -580,7 +580,6 @@ public class Main extends Application {
         return stack.get(tempStep);
     }
 
-    //TODO: добавить отображение структур данных. Короче говоря - отобразить метки времени у узлов
     private void stepInDepth(final Node curNode, final Node parent) {
         nodesStack.add(curNode);
         nodesStack.add(null);
@@ -936,16 +935,18 @@ public class Main extends Application {
         Random random = new Random();
         for (int countNode = 0; countNode < nodesAmount; countNode++) {
             Node nodeTmp = null;
+            int tryingCounter = 0;
             while(nodeTmp == null) {
-                retryCounter.getAndIncrement();
-                if(retryCounter.get() >= 50) {
+                if(tryingCounter >= 50) {
                     loggerPush(bundle.getString("LOG_cannotGenerate"));
-                    return;
+                    break;
                 }
-                double randomX = random.nextDouble(drawSpace.getWidth());
-                double randomY = random.nextDouble(drawSpace.getHeight());
-                Coords coords = new Coords(randomX, randomY);
+                Coords coords = new Coords(
+                        random.nextDouble(drawSpace.getWidth()),
+                        random.nextDouble(drawSpace.getHeight())
+                );
                 nodeTmp = placeGraphNode(coords, countNode);
+                tryingCounter++;
             }
         }
 
@@ -956,7 +957,7 @@ public class Main extends Application {
             boolean tryAttach = false;
             int tryingCounter = 0;
             while(!tryAttach) {
-                if(tryingCounter > archesAmount) {
+                if(tryingCounter > 50) {
                     retryCounter.getAndIncrement();
                     randomGraph(nodesAmount, archesAmount);
                     return;
